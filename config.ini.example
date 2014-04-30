@@ -1,0 +1,28 @@
+[global]
+# sleep between tests
+interval = 1  
+#whether to run the self-test or not
+selftest = True
+
+[api]
+# API address details
+host=api.bowdlerize.co.uk
+port=443
+https=True
+version=1.2
+
+#Uncomment to enable amqp support
+#
+#[amqp]
+#host=localhost
+#port=5672
+#ssl=False
+#user=guest
+#passwd=guest
+
+# a set of probe credentials
+[sampleprobe]
+uuid = 01234567890123456788
+secret = foobarbazquux00foobarbazquux
+public = False
+
