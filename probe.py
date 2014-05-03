@@ -98,7 +98,10 @@ class OrgProbe(object):
 			from amqpqueue import AMQPQueue
 			opts = dict(self.config.items('amqp'))
 			logging.info("Setting up AMQP with options: %s", opts)
-			self.queue = AMQPQueue(opts, self.isp.lower().replace(' ','_'), self.probe.get('public', False) is True)
+			self.queue = AMQPQueue(opts, 
+				self.isp.lower().replace(' ','_'), 
+				self.probe.get('public', False) is True,
+				self.signer)
 
 
 	def match_rule(self, req, rule):
@@ -201,6 +204,5 @@ class OrgProbe(object):
 					self.test_and_report_url(url['url'], data['hash'])
 
 
-			break
 			time.sleep(self.config.getint('global','interval'))
 

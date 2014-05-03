@@ -37,16 +37,12 @@ class APIRequest(object):
 			'/' if urlargs else '',
 			urlargs)
 
-	def timestamp(self):
-		return datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-
-
 	def get_signature(self):
 		return self.signer.get_signature(self.args, self.SIG_KEYS)
 
 	def execute(self):
 		if self.SEND_TIMESTAMP:
-			self.args['date'] = self.timestamp()
+			self.args['date'] = self.signer.timestamp()
 		if self.SIG_KEYS and self.signer:
 			self.args['signature'] = self.get_signature()
 		logging.info("Sending args: %s", self.args)
