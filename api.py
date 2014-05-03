@@ -1,9 +1,7 @@
 
 import sys
 import json
-import hmac
 import logging
-import hashlib
 import datetime
 import requests
 
@@ -23,10 +21,10 @@ class APIRequest(object):
 	ENDPOINT = None
 	METHOD = 'POST'
 
-	def __init__(self, secret, *urlargs, **kw):
+	def __init__(self, signer, *urlargs, **kw):
 		self.args = kw
 		self.urlargs = urlargs
-		self.secret = secret
+		self.signer = signer
 
 	def get_url(self):
 		urlargs = '/'.join(self.urlargs)
@@ -42,19 +40,14 @@ class APIRequest(object):
 	def timestamp(self):
 		return datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
-	def sign(self, *args):
-		msg = ':'.join([str(x) if not isinstance(x, (str,unicode)) else x for x in args])
-		logging.debug("Using signature string: %s", msg)
-		hm = hmac.new(self.secret, msg, hashlib.sha512)
-		return hm.hexdigest()
 
 	def get_signature(self):
-		return self.sign(*[self.args[x] for x in self.SIG_KEYS])
+		return self.signer.get_signature(self.args, self.SIG_KEYS)
 
 	def execute(self):
 		if self.SEND_TIMESTAMP:
 			self.args['date'] = self.timestamp()
-		if self.SIG_KEYS and self.secret:
+		if self.SIG_KEYS and self.signer:
 			self.args['signature'] = self.get_signature()
 		logging.info("Sending args: %s", self.args)
 		try:

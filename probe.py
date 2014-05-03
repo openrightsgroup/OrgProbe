@@ -10,6 +10,7 @@ import hashlib
 
 from api import *
 from httpqueue import HTTPQueue
+from signing import RequestSigner
 
 class SelfTestError(Exception):pass
 
@@ -20,9 +21,12 @@ class OrgProbe(object):
 		self.isp = None
 		self.ip = None
 		self.probe = None
+		self.signer = None
 		pass
 
 	def register(self, opts):
+		logging.warning("Untested code")
+		return
 		req = PrepareProbeRequest(opts['--secret'], email=opts['--email'])
 		code, data = req.execute()
 
@@ -67,7 +71,11 @@ class OrgProbe(object):
 			logging.error("Error downloading config: %s, %s", code, data['error'])
 
 	def get_ip_status(self):
-		req = StatusIPRequest(self.probe['secret'], probe_uuid=self.probe['uuid'] )
+		try:
+			args = (self.probe['public_ip'],)
+		except KeyError:
+			args = []
+		req = StatusIPRequest(self.signer, *args, probe_uuid=self.probe['uuid'] )
 		code, data = req.execute()
 		logging.info("Status: %s, %s", code, data)
 		self.isp =  data['isp']
@@ -85,7 +93,7 @@ class OrgProbe(object):
 	def setup_queue(self):
 		if not self.config.has_section('amqp'):
 			logging.info("Using HTTP Queue")
-			self.queue = HTTPQueue(self.probe['uuid'], self.probe['secret'], self.isp)
+			self.queue = HTTPQueue(self.probe['uuid'], self.signer, self.isp)
 		else:
 			from amqpqueue import AMQPQueue
 			opts = dict(self.config.items('amqp'))
@@ -175,6 +183,8 @@ class OrgProbe(object):
 			for x in self.config.options(self.probename)
 			])
 
+		self.signer = RequestSigner(self.probe['secret'])
+
 		self.configure()
 
 
@@ -191,6 +201,6 @@ class OrgProbe(object):
 					self.test_and_report_url(url['url'], data['hash'])
 
 
-
+			break
 			time.sleep(self.config.getint('global','interval'))
 

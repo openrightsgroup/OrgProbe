@@ -3,12 +3,12 @@ import logging
 from api import RequestHttptRequest,ResponseHttptRequest
 
 class HTTPQueue(object):
-	def __init__(self, probe_uuid, secret, isp):
-		self.probe_uuid, self.secret, self.isp = probe_uuid, secret, isp
+	def __init__(self, probe_uuid, signer, isp):
+		self.probe_uuid, self.signer, self.isp = probe_uuid, signer, isp
 
 	def __iter__(self):
 		while True:
-			rq = RequestHttptRequest(self.secret, 
+			rq = RequestHttptRequest(self.signer, 
 				probe_uuid=self.probe_uuid, 
 				network_name=self.isp
 				)
@@ -21,8 +21,8 @@ class HTTPQueue(object):
 
 			yield data
 
-	def send(self, report):
-		rsp = ResponseHttptRequest(self.secret,
+	def send(self, report, urlhash=None):
+		rsp = ResponseHttptRequest(self.signer,
 		**report
 		)
 		rsp.execute()
