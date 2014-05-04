@@ -170,6 +170,26 @@ class OrgProbe(object):
 				raise SelfTestError
 	
 
+	def delay(self, multiplier=1):
+		# only httpqueue requires sleep intervals at the moment
+		if isinstance(self.queue, HTTPQueue):
+			time.sleep(self.config.getint('global','interval') * multiplier)
+
+	def run_test(self, data):
+		if data is None:
+			self.delay(5)
+			return
+
+
+		if 'url' in data:
+			self.test_and_report_url(data['url'], data['hash'])
+		elif 'urls' in data:
+			for url in data['urls']:
+				self.test_and_report_url(url['url'], data['hash'])
+
+		self.delay()
+
+
 	def run(self, args):
 		if len(args) > 0:
 			self.probename = args[0]
@@ -190,19 +210,6 @@ class OrgProbe(object):
 
 		self.configure()
 
+		self.queue.drive(self.run_test)
 
-		for data in self.queue:
-			if data is None:
-				time.sleep(self.config.getint('global','interval')*5)
-				continue
-
-
-			if 'url' in data:
-				self.test_and_report_url(data['url'], data['hash'])
-			elif 'urls' in data:
-				for url in data['urls']:
-					self.test_and_report_url(url['url'], data['hash'])
-
-
-			time.sleep(self.config.getint('global','interval'))
 
