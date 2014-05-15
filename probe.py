@@ -22,6 +22,7 @@ class OrgProbe(object):
 		self.ip = None
 		self.probe = None
 		self.signer = None
+		self.hb = None
 		pass
 
 	def register(self, opts):
@@ -102,6 +103,15 @@ class OrgProbe(object):
 				self.isp.lower().replace(' ','_'), 
 				self.probe.get('public', False) is True,
 				self.signer)
+			if 'heartbeat' in self.probe:
+				from heartbeat import Heartbeat
+				self.hb = Heartbeat(self.queue.conn,
+					int(self.probe['heartbeat']),
+					self.probe['uuid']
+					)
+				self.hb.start_thread()
+
+					
 
 
 	def match_rule(self, req, rule):
@@ -210,6 +220,10 @@ class OrgProbe(object):
 
 		self.configure()
 
-		self.queue.drive(self.run_test)
+		try:
+			self.queue.drive(self.run_test)
+		finally:
+			if self.hb is not None:
+				self.hb.stop_thread()
 
 
