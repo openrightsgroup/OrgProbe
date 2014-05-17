@@ -79,7 +79,12 @@ class OrgProbe(object):
 		req = StatusIPRequest(self.signer, *args, probe_uuid=self.probe['uuid'] )
 		code, data = req.execute()
 		logging.info("Status: %s, %s", code, data)
-		self.isp =  data['isp']
+		if 'network' in self.probe:
+			self.isp = self.probe['network']
+			logging.debug("Overriding network to: %s", self.isp)
+		else:
+			self.isp =  data['isp']
+
 		self.ip = data['ip']
 
 		for rule in self.apiconfig['rules']:

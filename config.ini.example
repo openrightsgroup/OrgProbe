@@ -25,4 +25,6 @@ version=1.2
 uuid = 01234567890123456788
 secret = foobarbazquux00foobarbazquux
 public = False
+#network = Virgin Mobile
 
+# Add "network" to override the detected ISP (useful for mobile operators)
