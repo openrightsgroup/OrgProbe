@@ -1,8 +1,6 @@
 [global]
 # sleep between tests
 interval = 1  
-#whether to run the self-test or not
-selftest = True
 
 [api]
 # API address details
@@ -25,6 +23,9 @@ version=1.2
 uuid = 01234567890123456788
 secret = foobarbazquux00foobarbazquux
 public = False
-#network = Virgin Mobile
+#whether to run the self-test or not
+selftest = True
 
 # Add "network" to override the detected ISP (useful for mobile operators)
+##network = Virgin Mobile
+

@@ -106,7 +106,7 @@ class OrgProbe(object):
 			logging.info("Setting up AMQP with options: %s", opts)
 			self.queue = AMQPQueue(opts, 
 				self.isp.lower().replace(' ','_'), 
-				self.probe.get('public', False) is True,
+				self.probe.get('public', 'False') == 'True', # converts string to bool, with default
 				self.signer)
 			if 'heartbeat' in self.probe:
 				from heartbeat import Heartbeat
@@ -172,7 +172,7 @@ class OrgProbe(object):
 
 	def run_selftest(self):
 		try:
-			if self.config.getboolean('global','selftest') is False:
+			if self.probe.get('selftest', 'True')  == 'False':
 				return
 		except:
 			pass
