@@ -93,7 +93,10 @@ class OrgProbe(object):
 				break
 		else:
 			logging.error("No rules found for ISP: %s", self.isp)
-			sys.exit(1)
+			if self.probe.get('skip_rules','False') == 'True':
+				self.rules = []
+			else:
+				sys.exit(1)
 		logging.info("Got rules: %s", self.rules)
 
 	def setup_queue(self):
