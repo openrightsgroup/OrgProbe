@@ -106,7 +106,7 @@ class OrgProbe(object):
 			logging.info("Setting up AMQP with options: %s", opts)
 			self.queue = AMQPQueue(opts, 
 				self.isp.lower().replace(' ','_'), 
-				self.probe.get('public', 'False') == 'True', # converts string to bool, with default
+				self.probe.get('queue', 'org'), 
 				self.signer,
 				None if 'lifetime' not in self.probe else int(self.probe['lifetime'])
 				)

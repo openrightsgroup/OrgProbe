@@ -7,7 +7,7 @@ import amqplib.client_0_8 as amqp
 class AMQPQueue(object):
 	SIG_KEYS = ["probe_uuid", "url", "status", "date", "config"]
 
-	def __init__(self, opts, network, public, signer, lifetime = None):
+	def __init__(self, opts, network, queuename, signer, lifetime = None):
 		self.conn = amqp.Connection(
 			user=opts['user'],
 			passwd=opts['passwd'],
@@ -17,10 +17,7 @@ class AMQPQueue(object):
 		logging.debug("Opening AMQP connection")
 		self.ch = self.conn.channel()
 		self.signer = signer
-		if public is False:
-			self.queue_name = 'url.' + network + '.org'
-		else:
-			self.queue_name = 'url.'+network+'.public'
+		self.queue_name = 'url.' + network + '.' + queue_name
 		logging.info("Listening on queue: %s", self.queue_name)
 		self.lifetime = lifetime
 		self.count = 0

@@ -22,7 +22,7 @@ version=1.2
 [sampleprobe]
 uuid = 01234567890123456788
 secret = foobarbazquux00foobarbazquux
-public = False
+queue = org
 #whether to run the self-test or not
 selftest = True
 
