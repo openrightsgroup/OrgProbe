@@ -107,7 +107,9 @@ class OrgProbe(object):
 			self.queue = AMQPQueue(opts, 
 				self.isp.lower().replace(' ','_'), 
 				self.probe.get('public', 'False') == 'True', # converts string to bool, with default
-				self.signer)
+				self.signer,
+				None if 'lifetime' not in self.probe else int(self.probe['lifetime'])
+				)
 			if 'heartbeat' in self.probe:
 				from heartbeat import Heartbeat
 				self.hb = Heartbeat(self.queue.conn,
@@ -115,9 +117,6 @@ class OrgProbe(object):
 					self.probe['uuid']
 					)
 				self.hb.start_thread()
-
-					
-
 
 	def match_rule(self, req, rule):
 		if rule.startswith('re:'):
@@ -171,11 +170,8 @@ class OrgProbe(object):
 
 
 	def run_selftest(self):
-		try:
-			if self.probe.get('selftest', 'True')  == 'False':
-				return
-		except:
-			pass
+		if self.probe.get('selftest', 'True')  == 'False':
+			return
 		
 		for url in self.apiconfig['self-test']['must-allow']:
 			if self.test_url(url)[0] != 'ok':
@@ -227,6 +223,7 @@ class OrgProbe(object):
 
 		try:
 			self.queue.drive(self.run_test)
+			logging.info("Exiting cleanly")
 		finally:
 			if self.hb is not None:
 				self.hb.stop_thread()

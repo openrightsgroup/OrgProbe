@@ -7,7 +7,7 @@ import amqplib.client_0_8 as amqp
 class AMQPQueue(object):
 	SIG_KEYS = ["probe_uuid", "url", "status", "date", "config"]
 
-	def __init__(self, opts, network, public, signer):
+	def __init__(self, opts, network, public, signer, lifetime = None):
 		self.conn = amqp.Connection(
 			user=opts['user'],
 			passwd=opts['passwd'],
@@ -22,6 +22,8 @@ class AMQPQueue(object):
 		else:
 			self.queue_name = 'url.'+network+'.public'
 		logging.info("Listening on queue: %s", self.queue_name)
+		self.lifetime = lifetime
+		self.count = 0
 
 	def __iter__(self):
 		"""The Queue object can be used as an iterator, to fetch a test URL from 
@@ -60,7 +62,11 @@ class AMQPQueue(object):
 			logging.info("Got data: %s", data)
 			self.ch.basic_ack(msg.delivery_tag)
 			callback(data)
-		self.ch.basic_consume(self.queue_name, callback=decode)
+			self.count += 1
+			if self.lifetime is not None and self.count > self.lifetime:
+				logging.info("Cancelling subscription due to lifetime expiry")
+				self.ch.basic_cancel('consumer1')
+		self.ch.basic_consume(self.queue_name, consumer_tag='consumer1', callback=decode)
 		while True:
 			# loop forever, pumping messages
 			self.ch.wait()
