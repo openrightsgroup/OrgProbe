@@ -7,7 +7,7 @@ import amqplib.client_0_8 as amqp
 class AMQPQueue(object):
 	SIG_KEYS = ["probe_uuid", "url", "status", "date", "config"]
 
-	def __init__(self, opts, network, queuename, signer, lifetime = None):
+	def __init__(self, opts, network, queue_name, signer, lifetime = None):
 		self.conn = amqp.Connection(
 			user=opts['user'],
 			passwd=opts['passwd'],
