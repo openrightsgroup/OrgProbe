@@ -20,6 +20,7 @@ class AMQPQueue(object):
 		self.queue_name = 'url.' + network + '.' + queue_name
 		logging.info("Listening on queue: %s", self.queue_name)
 		self.lifetime = lifetime
+		self.alive = True
 		self.count = 0
 
 	def __iter__(self):
@@ -60,12 +61,13 @@ class AMQPQueue(object):
 			self.ch.basic_ack(msg.delivery_tag)
 			callback(data)
 			self.count += 1
+			logging.debug("Count: %s, Lifetime: %s", self.count, self.lifetime)
 			if self.lifetime is not None and self.count > self.lifetime:
 				logging.info("Cancelling subscription due to lifetime expiry")
-				self.ch.basic_cancel('consumer1')
+				self.alive = False
 		self.ch.basic_consume(self.queue_name, consumer_tag='consumer1', callback=decode)
-		while True:
-			# loop forever, pumping messages
+		while self.alive:
+			# loop while alive, pumping messages
 			self.ch.wait()
 
 
