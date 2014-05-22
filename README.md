@@ -15,8 +15,6 @@ The rest is standard library stuff.
 Still todo:
 
 * setup.py
-* Message signing in AMQP
-
 
 To run:
 
@@ -24,7 +22,7 @@ cd /path/above/checkout
 
 python -m OrgProbe -c /path/to/config
 
-An example config file is included.  You'll need to use the new-user signup and probe registration calls in the API to get credentials.  The registration routine in OrgProbe is alpha-quality at best.
+An example config file is included.  You'll need to use the new-user signup and probe registration calls in the API to get credentials.  The registration routine built into OrgProbe is alpha-quality at best.
 
 
 
