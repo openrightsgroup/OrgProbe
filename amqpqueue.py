@@ -9,7 +9,7 @@ class AMQPQueue(object):
 
 	def __init__(self, opts, network, queue_name, signer, lifetime = None):
 		self.conn = amqp.Connection(
-			user=opts['user'],
+			userid=opts['userid'],
 			passwd=opts['passwd'],
 			host=opts['host']
 			)
