@@ -153,7 +153,7 @@ class OrgProbe(object):
 		for rule in self.rules:
 			if self.match_rule(req, rule) is True:
 				logging.info("Matched rule: %s; blocked", rule)
-				return 'blocked', req.history[-1].status_code if hasattr(req, 'history') else req.status_code
+				return 'blocked', req.history[-1].status_code if hasattr(req, 'history') and len(req.history > 0) else req.status_code
 		
 		logging.info("Status: OK")
 		return 'ok', req.status_code
