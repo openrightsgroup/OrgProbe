@@ -60,7 +60,7 @@ class OrgProbe(object):
 		self.setup_queue()
 		
 	def get_api_config(self):
-		req = ConfigRequest(None)
+		req = ConfigRequest(None, self.probe.get('config_version','latest'))
 		code, data = req.execute()
 		if code == 200:
 			logging.info("Loaded config: %s", data['version'])

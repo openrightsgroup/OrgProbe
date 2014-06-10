@@ -86,7 +86,7 @@ class RequestHttptRequest(APIRequest):
 	SEND_TIMESTAMP=False
 
 class ConfigRequest(APIRequest):
-	ENDPOINT = 'config/latest'
+	ENDPOINT = 'config'
 	SIG_KEYS = []
 	METHOD = 'GET'
 	SEND_TIMESTAMP=False
