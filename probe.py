@@ -126,8 +126,12 @@ class OrgProbe(object):
 			ruletype, field, pattern = rule.split(':',2)
 			if field == 'url':
 				value = req.url
+				flags = None
+			if field == 'body':
+				value = req.content
+				flags = re.M
 
-			match = re.search(pattern, value)
+			match = re.search(pattern, value, flags)
 			if match is not None:
 				return True
 			return False
