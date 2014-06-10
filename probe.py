@@ -126,7 +126,7 @@ class OrgProbe(object):
 			ruletype, field, pattern = rule.split(':',2)
 			if field == 'url':
 				value = req.url
-				flags = None
+				flags = 0
 			if field == 'body':
 				value = req.content
 				flags = re.M
