@@ -2,6 +2,11 @@
 # sleep between tests
 interval = 1  
 
+# Add "interface" to use a specific network interface for testing
+# interface = ppp0
+# interface = wlan0
+# interface = eth0
+
 [api]
 # API address details
 host=api.bowdlerize.co.uk
