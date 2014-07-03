@@ -15,6 +15,7 @@ from signing import RequestSigner
 class SelfTestError(Exception):pass
 
 class OrgProbe(object):
+	DEFAULT_USERAGENT = 'OrgProbe/0.9 (+http://www.blocked.org.uk)'
 	def __init__(self, config):
 		self.config = config
 		self.apiconfig = None
@@ -23,6 +24,8 @@ class OrgProbe(object):
 		self.probe = None
 		self.signer = None
 		self.hb = None
+		self.useragent = None
+		self.headers = {}
 		pass
 
 	def register(self, opts):
@@ -142,7 +145,7 @@ class OrgProbe(object):
 	def test_url(self, url):
 		logging.info("Testing URL: %s", url)
 		try:
-			req = requests.get(url, timeout=5)
+			req = requests.get(url, headers=self.headers, timeout=5)
 		except (requests.exceptions.Timeout,),v:
 			logging.warn("Connection timeout: %s", v)
 			return 'timeout', -1
@@ -225,6 +228,9 @@ class OrgProbe(object):
 			])
 
 		self.signer = RequestSigner(self.probe['secret'])
+		self.headers = {
+			'User-Agent': self.probe.get('useragent',self.DEFAULT_USERAGENT),
+			}
 
 		self.configure()
 
