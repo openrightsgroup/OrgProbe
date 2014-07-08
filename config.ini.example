@@ -15,7 +15,7 @@ version=1.2
 #host=localhost
 #port=5672
 #ssl=False
-#user=guest
+#userid=guest
 #passwd=guest
 
 # a set of probe credentials
