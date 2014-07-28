@@ -11,6 +11,7 @@ import hashlib
 from api import *
 from httpqueue import HTTPQueue
 from signing import RequestSigner
+from category import Categorizor
 
 class SelfTestError(Exception):pass
 
@@ -18,14 +19,23 @@ class OrgProbe(object):
 	DEFAULT_USERAGENT = 'OrgProbe/0.9 (+http://www.blocked.org.uk)'
 	def __init__(self, config):
 		self.config = config
+
+		# initialize configuration
+
+		# set up in .run()
+		self.probe = None
+		self.signer = None
+		self.headers = {}
+
+		# set up in .configure()
+
 		self.apiconfig = None
 		self.isp = None
 		self.ip = None
-		self.probe = None
-		self.signer = None
+		self.categorizor = None
+
+		# set up in .setup_queue()
 		self.hb = None
-		self.useragent = None
-		self.headers = {}
 		pass
 
 	def register(self, opts):
@@ -63,6 +73,12 @@ class OrgProbe(object):
 		self.setup_queue()
 		
 	def get_api_config(self):
+		if self.probe.get('api_config_file'):
+			with open(self.probe['api_config_file']) as fp:
+				self.apiconfig = json.load(fp)
+				logging.info("Loaded config: %s from %s", self.apiconfig['version'], self.probe['api_config_file'])
+
+			return
 		req = ConfigRequest(None, self.probe.get('config_version','latest'))
 		code, data = req.execute()
 		if code == 200:
@@ -93,6 +109,8 @@ class OrgProbe(object):
 		for rule in self.apiconfig['rules']:
 			if rule['isp'] == self.isp:
 				self.rules = rule['match'] 
+				if 'category' in rule:
+					self.categorizor = Categorizor(rule['category'])
 				break
 		else:
 			logging.error("No rules found for ISP: %s", self.isp)
@@ -100,6 +118,7 @@ class OrgProbe(object):
 				self.rules = []
 			else:
 				sys.exit(1)
+
 		logging.info("Got rules: %s", self.rules)
 
 	def setup_queue(self):
@@ -114,7 +133,7 @@ class OrgProbe(object):
 				self.isp.lower().replace(' ','_'), 
 				self.probe.get('queue', 'org'), 
 				self.signer,
-				None if 'lifetime' not in self.probe else int(self.probe['lifetime'])
+				int(self.probe['lifetime']) if 'lifetime' in self.probe else None 
 				)
 			if 'heartbeat' in self.probe:
 				from heartbeat import Heartbeat
@@ -140,7 +159,22 @@ class OrgProbe(object):
 			return False
 
 		return None
-				
+
+	def test_response(self, req):
+		category = ''
+		for rule in self.rules:
+			if self.match_rule(req, rule) is True:
+				logging.info("Matched rule: %s; blocked", rule)
+				if self.categorizor:
+					category = self.categorizor.categorize(req.url)
+				return (
+					'blocked', 
+					req.history[-1].status_code if hasattr(req, 'history') and len(req.history) > 0 else req.status_code,
+					category,
+					)
+		
+		logging.info("Status: OK")
+		return 'ok', req.status_code, None
 
 	def test_url(self, url):
 		logging.info("Testing URL: %s", url)
@@ -148,21 +182,15 @@ class OrgProbe(object):
 			req = requests.get(url, headers=self.headers, timeout=5)
 		except (requests.exceptions.Timeout,),v:
 			logging.warn("Connection timeout: %s", v)
-			return 'timeout', -1
+			return 'timeout', -1, None
 		except Exception, v:
 			logging.warn("Connection error: %s", v)
-			return 'error', -1
+			return 'error', -1, None
 
-		for rule in self.rules:
-			if self.match_rule(req, rule) is True:
-				logging.info("Matched rule: %s; blocked", rule)
-				return 'blocked', req.history[-1].status_code if hasattr(req, 'history') and len(req.history) > 0 else req.status_code
-		
-		logging.info("Status: OK")
-		return 'ok', req.status_code
+		return self.test_response(req)
 
 	def test_and_report_url(self, url, urlhash = None):
-		result, code = self.test_url(url)
+		result, code, category = self.test_url(url)
 
 		logging.info("Logging result with ORG: %s, %s", result, code)
 
@@ -174,6 +202,7 @@ class OrgProbe(object):
 			'status': result,
 			'probe_uuid': self.probe['uuid'],
 			'config': self.apiconfig['version'],
+			'category': category or '',
 		}
 
 		self.queue.send(report, urlhash)
