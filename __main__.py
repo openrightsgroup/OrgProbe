@@ -17,8 +17,8 @@ logging.basicConfig(
 	datefmt = '[%Y-%m-%d %H:%M:%S]',
 	format='%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s')
 
-#logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
-#logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.ERROR)
+logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
+logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.ERROR)
 
 configfile = opts.get('-c','config.ini')
 config = ConfigParser.ConfigParser()

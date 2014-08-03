@@ -1,4 +1,5 @@
 import re
+import logging
 import urlparse
 
 class Categorizor(object):
@@ -21,6 +22,7 @@ class Categorizor(object):
 				if len(self.rule) == 3:
 					if self.rule[2] == 'base64':
 						param = param.decode('base64')
+				logging.debug("Got category: %s", param)
 				return param
 			except (KeyError,IndexError):
 				return None

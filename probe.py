@@ -110,6 +110,7 @@ class OrgProbe(object):
 			if rule['isp'] == self.isp:
 				self.rules = rule['match'] 
 				if 'category' in rule:
+					logging.info("Creating Categorizor with rule: %s", rule['category'])
 					self.categorizor = Categorizor(rule['category'])
 				break
 		else:
