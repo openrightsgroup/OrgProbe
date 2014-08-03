@@ -4,7 +4,7 @@ interval = 1
 
 [api]
 # API address details
-host=api.bowdlerize.co.uk
+host=api.blocked.org.uk
 port=443
 https=True
 version=1.2
@@ -23,9 +23,30 @@ version=1.2
 uuid = 01234567890123456788
 secret = foobarbazquux00foobarbazquux
 queue = org
-#whether to run the self-test or not
-selftest = True
+selftest = True		#whether to run the self-test or not
+
+## completely optional per-probe settings - uncomment to enable
+
+# page body size to read
+# read_size = 8192
+
+# use a different version of the API config
+# config_version = 2014010101
+
+# use an alternate api config file, instead of reading JSON from api/config/latest
+# api_config_file = local_config.json
+
+# number of requests to process before exiting
+# lifetime = 15000
+
+# number of seconds between heartbeat messages (AMQP only)
+# heartbeat = 120
 
 # Add "network" to override the detected ISP (useful for mobile operators)
-##network = Virgin Mobile
+# network = Virgin Mobile
 
+# Allow probe to start running against an ISP with no rules in config
+# skip_rules = true
+
+# customize user agent
+# useragent = OMG/1.0 (+http://example.com)
