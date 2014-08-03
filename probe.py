@@ -169,7 +169,7 @@ class OrgProbe(object):
 		else:
 			# we're not downloading images
 			body = ''
-		logging.debug("Read body length: %s", len(body))
+		logging.info("Read body length: %s", len(body))
 		for rule in self.rules:
 			if self.match_rule(req, body, rule) is True:
 				logging.info("Matched rule: %s; blocked", rule)
