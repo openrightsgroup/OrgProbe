@@ -16,7 +16,7 @@ from category import Categorizor
 class SelfTestError(Exception):pass
 
 class OrgProbe(object):
-	DEFAULT_USERAGENT = 'OrgProbe/0.9 (+http://www.blocked.org.uk)'
+	DEFAULT_USERAGENT = 'OrgProbe/0.9.2 (+http://www.blocked.org.uk)'
 	def __init__(self, config):
 		self.config = config
 
@@ -26,6 +26,7 @@ class OrgProbe(object):
 		self.probe = None
 		self.signer = None
 		self.headers = {}
+		self.read_size = 8192 # size of body to read
 
 		# set up in .configure()
 
@@ -144,14 +145,14 @@ class OrgProbe(object):
 					)
 				self.hb.start_thread()
 
-	def match_rule(self, req, rule):
+	def match_rule(self, req, body, rule):
 		if rule.startswith('re:'):
 			ruletype, field, pattern = rule.split(':',2)
 			if field == 'url':
 				value = req.url
 				flags = 0
 			if field == 'body':
-				value = req.content
+				value = body
 				flags = re.M
 
 			match = re.search(pattern, value, flags)
@@ -163,8 +164,14 @@ class OrgProbe(object):
 
 	def test_response(self, req):
 		category = ''
+		if req.headers['content-type'].lower().startswith('text'):
+			body = req.iter_content(self.read_size).next()
+		else:
+			# we're not downloading images
+			body = ''
+		logging.info("Read body length: %s", len(body))
 		for rule in self.rules:
-			if self.match_rule(req, rule) is True:
+			if self.match_rule(req, body, rule) is True:
 				logging.info("Matched rule: %s; blocked", rule)
 				if self.categorizor:
 					category = self.categorizor.categorize(req.url)
@@ -180,7 +187,7 @@ class OrgProbe(object):
 	def test_url(self, url):
 		logging.info("Testing URL: %s", url)
 		try:
-			req = requests.get(url, headers=self.headers, timeout=5)
+			req = requests.get(url, headers=self.headers, timeout=5, stream=True)
 		except (requests.exceptions.Timeout,),v:
 			logging.warn("Connection timeout: %s", v)
 			return 'timeout', -1, None
@@ -261,6 +268,9 @@ class OrgProbe(object):
 		self.headers = {
 			'User-Agent': self.probe.get('useragent',self.DEFAULT_USERAGENT),
 			}
+
+		if 'read_size' in self.probe:
+			self.read_size = int(self.probe['read_size'])
 
 		self.configure()
 
