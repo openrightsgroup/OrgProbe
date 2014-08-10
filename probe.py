@@ -7,6 +7,7 @@ import time
 import logging
 import requests
 import hashlib
+import contextlib
 
 from api import *
 from httpqueue import HTTPQueue
@@ -187,7 +188,12 @@ class OrgProbe(object):
 	def test_url(self, url):
 		logging.info("Testing URL: %s", url)
 		try:
-			req = requests.get(url, headers=self.headers, timeout=5, stream=True)
+			with contextlib.closing(requests.get(url, headers=self.headers, timeout=5, stream=True)) as req:
+				try:
+					return self.test_response(req)
+				except Exception,v:
+					logging.error("Response test error: %s", v)
+					raise
 		except (requests.exceptions.Timeout,),v:
 			logging.warn("Connection timeout: %s", v)
 			return 'timeout', -1, None
@@ -195,7 +201,6 @@ class OrgProbe(object):
 			logging.warn("Connection error: %s", v)
 			return 'error', -1, None
 
-		return self.test_response(req)
 
 	def test_and_report_url(self, url, urlhash = None):
 		result, code, category = self.test_url(url)
