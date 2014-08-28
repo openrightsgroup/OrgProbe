@@ -24,5 +24,8 @@ python -m OrgProbe -c /path/to/config
 
 An example config file is included.  You'll need to use the new-user signup and probe registration calls in the API to get credentials.  The registration routine built into OrgProbe is alpha-quality at best.
 
+If you're running the Blocking-Middleware Vagrant VM, you can start OrgProbe with the config.vagrant.ini config file, which will start a nice fast HTTP-mode poll against the FakeISP set up in the VM database.
+
+
 
 
