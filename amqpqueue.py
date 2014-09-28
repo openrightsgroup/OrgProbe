@@ -22,6 +22,7 @@ class AMQPQueue(object):
 		self.lifetime = lifetime
 		self.alive = True
 		self.count = 0
+		self.prefetch = int(opts['prefetch']) if 'prefetch' in opts else None
 
 	def __iter__(self):
 		"""The Queue object can be used as an iterator, to fetch a test URL from 
@@ -65,6 +66,9 @@ class AMQPQueue(object):
 			if self.lifetime is not None and self.count > self.lifetime:
 				logging.info("Cancelling subscription due to lifetime expiry")
 				self.alive = False
+		if self.prefetch:
+			logging.debug("Setting QOS prefetch to %s", self.prefetch)	
+			self.ch.basic_qos(0, int(self.prefetch), False)
 		self.ch.basic_consume(self.queue_name, consumer_tag='consumer1', callback=decode)
 		while self.alive:
 			# loop while alive, pumping messages

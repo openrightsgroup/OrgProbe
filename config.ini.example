@@ -17,6 +17,7 @@ version=1.2
 #ssl=False
 #userid=guest
 #passwd=guest
+#prefetch=200
 
 # a set of probe credentials
 [sampleprobe]
