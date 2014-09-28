@@ -65,6 +65,9 @@ class AMQPQueue(object):
 			if self.lifetime is not None and self.count > self.lifetime:
 				logging.info("Cancelling subscription due to lifetime expiry")
 				self.alive = False
+		if 'prefetch' in opts:
+			logging.debug("Setting QOS prefetch to %s", opts['prefetch'])	
+			self.ch.basic_qos(0, int(opts['prefetch']))
 		self.ch.basic_consume(self.queue_name, consumer_tag='consumer1', callback=decode)
 		while self.alive:
 			# loop while alive, pumping messages
