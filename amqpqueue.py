@@ -68,7 +68,7 @@ class AMQPQueue(object):
 				self.alive = False
 		if self.prefetch:
 			logging.debug("Setting QOS prefetch to %s", self.prefetch)	
-			self.ch.basic_qos(0, int(self.prefetch))
+			self.ch.basic_qos(0, int(self.prefetch), False)
 		self.ch.basic_consume(self.queue_name, consumer_tag='consumer1', callback=decode)
 		while self.alive:
 			# loop while alive, pumping messages
