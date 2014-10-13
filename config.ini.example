@@ -28,7 +28,7 @@ selftest = True		#whether to run the self-test or not
 
 ## completely optional per-probe settings - uncomment to enable
 
-# page body size to read
+# page body size to read (0 == read all)
 # read_size = 8192
 
 # use a different version of the API config
@@ -51,3 +51,6 @@ selftest = True		#whether to run the self-test or not
 
 # customize user agent
 # useragent = OMG/1.0 (+http://example.com)
+
+# request timeout configurable (default 5)
+# timeout = 5

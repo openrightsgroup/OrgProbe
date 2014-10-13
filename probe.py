@@ -165,11 +165,14 @@ class OrgProbe(object):
 
 	def test_response(self, req):
 		category = ''
-		if req.headers['content-type'].lower().startswith('text'):
-			body = req.iter_content(self.read_size).next()
-		else:
-			# we're not downloading images
-			body = ''
+                if self.read_size > 0:
+                    if req.headers['content-type'].lower().startswith('text'):
+                            body = req.iter_content(self.read_size).next()
+                    else:
+                            # we're not downloading images
+                            body = ''
+                else:
+                    body = req.content
 		logging.info("Read body length: %s", len(body))
 		for rule in self.rules:
 			if self.match_rule(req, body, rule) is True:
@@ -188,7 +191,12 @@ class OrgProbe(object):
 	def test_url(self, url):
 		logging.info("Testing URL: %s", url)
 		try:
-			with contextlib.closing(requests.get(url, headers=self.headers, timeout=5, stream=True)) as req:
+			with contextlib.closing(requests.get(
+                            url, 
+                            headers=self.headers, 
+                            timeout=int(self.probe.get('timeout', 5)), 
+                            stream=True if self.read_size > 0 else False
+                            )) as req:
 				try:
 					return self.test_response(req)
 				except Exception,v:
