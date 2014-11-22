@@ -17,7 +17,7 @@ from category import Categorizor
 class SelfTestError(Exception):pass
 
 class OrgProbe(object):
-	DEFAULT_USERAGENT = 'OrgProbe/0.9.2 (+http://www.blocked.org.uk)'
+	DEFAULT_USERAGENT = 'OrgProbe/0.9.3 (+http://www.blocked.org.uk)'
 	def __init__(self, config):
 		self.config = config
 
@@ -35,6 +35,7 @@ class OrgProbe(object):
 		self.isp = None
 		self.ip = None
 		self.categorizor = None
+                self.blocktype = None
 
 		# set up in .setup_queue()
 		self.hb = None
@@ -114,6 +115,9 @@ class OrgProbe(object):
 				if 'category' in rule:
 					logging.info("Creating Categorizor with rule: %s", rule['category'])
 					self.categorizor = Categorizor(rule['category'])
+                                if 'blocktype' in rule:
+                                        logging.info("Adding blocktype array: %s", rule['blocktype'])
+                                        self.blocktype = rule['blocktype']
 				break
 		else:
 			logging.error("No rules found for ISP: %s", self.isp)
@@ -174,7 +178,7 @@ class OrgProbe(object):
                 else:
                     body = req.content
 		logging.info("Read body length: %s", len(body))
-		for rule in self.rules:
+		for rulenum, rule in enumerate(self.rules):
 			if self.match_rule(req, body, rule) is True:
 				logging.info("Matched rule: %s; blocked", rule)
 				if self.categorizor:
@@ -183,6 +187,7 @@ class OrgProbe(object):
 					'blocked', 
 					req.history[-1].status_code if hasattr(req, 'history') and len(req.history) > 0 else req.status_code,
 					category,
+                                        self.blocktype[rulenum] if self.blocktype else None
 					)
 		
 		logging.info("Status: OK")
@@ -211,7 +216,7 @@ class OrgProbe(object):
 
 
 	def test_and_report_url(self, url, urlhash = None):
-		result, code, category = self.test_url(url)
+		result, code, category, blocktype = self.test_url(url)
 
 		logging.info("Logging result with ORG: %s, %s", result, code)
 
@@ -224,6 +229,7 @@ class OrgProbe(object):
 			'probe_uuid': self.probe['uuid'],
 			'config': self.apiconfig['version'],
 			'category': category or '',
+                        'blocktype': blocktype or '',
 		}
 
 		self.queue.send(report, urlhash)
