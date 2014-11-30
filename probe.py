@@ -191,7 +191,7 @@ class OrgProbe(object):
 					)
 		
 		logging.info("Status: OK")
-		return 'ok', req.status_code, None
+		return 'ok', req.status_code, None, None
 
 	def test_url(self, url):
 		logging.info("Testing URL: %s", url)
@@ -209,10 +209,10 @@ class OrgProbe(object):
 					raise
 		except (requests.exceptions.Timeout,),v:
 			logging.warn("Connection timeout: %s", v)
-			return 'timeout', -1, None
+			return 'timeout', -1, None, None
 		except Exception, v:
 			logging.warn("Connection error: %s", v)
-			return 'error', -1, None
+			return 'error', -1, None, None
 
 
 	def test_and_report_url(self, url, urlhash = None):
