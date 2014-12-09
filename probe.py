@@ -200,6 +200,7 @@ class OrgProbe(object):
                             url, 
                             headers=self.headers, 
                             timeout=int(self.probe.get('timeout', 5)), 
+			    verify=self.verify_ssl,
                             stream=True if self.read_size > 0 else False
                             )) as req:
 				try:
@@ -207,6 +208,9 @@ class OrgProbe(object):
 				except Exception,v:
 					logging.error("Response test error: %s", v)
 					raise
+		except (requests.exceptions.SSLError,),v:
+			logging.warn("SSL Error: %s", v)
+			return 'sslerror', -1, None, None
 		except (requests.exceptions.Timeout,),v:
 			logging.warn("Connection timeout: %s", v)
 			return 'timeout', -1, None, None
@@ -290,6 +294,9 @@ class OrgProbe(object):
 
 		if 'read_size' in self.probe:
 			self.read_size = int(self.probe['read_size'])
+
+		if 'verify_ssl' in self.probe:
+			self.verify_ssl = (self.probe['verify_ssl'] == 'true')
 
 		self.configure()
 

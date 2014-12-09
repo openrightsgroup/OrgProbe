@@ -54,3 +54,6 @@ selftest = True		#whether to run the self-test or not
 
 # request timeout configurable (default 5)
 # timeout = 5
+
+# verify SSL
+# verify_ssl = true
