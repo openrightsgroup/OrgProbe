@@ -17,7 +17,7 @@ from category import Categorizor
 class SelfTestError(Exception):pass
 
 class OrgProbe(object):
-	DEFAULT_USERAGENT = 'OrgProbe/0.9.3 (+http://www.blocked.org.uk)'
+	DEFAULT_USERAGENT = 'OrgProbe/0.9.4 (+http://www.blocked.org.uk)'
 	def __init__(self, config):
 		self.config = config
 
