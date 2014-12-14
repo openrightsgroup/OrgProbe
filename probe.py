@@ -200,7 +200,7 @@ class OrgProbe(object):
                             url, 
                             headers=self.headers, 
                             timeout=int(self.probe.get('timeout', 5)), 
-			    verify=self.verify_ssl,
+							verify=self.verify_ssl,
                             stream=True if self.read_size > 0 else False
                             )) as req:
 				try:
@@ -216,6 +216,13 @@ class OrgProbe(object):
 			return 'timeout', -1, None, None
 		except Exception, v:
 			logging.warn("Connection error: %s", v)
+			try:
+				# look for dns failure in exception message
+				# requests lib turns nested exceptions into strings
+				if 'Name or service not known' in v.args[0].message:
+					return 'dnserror', -1, None, None
+			except:
+				pass
 			return 'error', -1, None, None
 
 
