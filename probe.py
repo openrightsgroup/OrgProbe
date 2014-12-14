@@ -220,6 +220,14 @@ class OrgProbe(object):
 				# look for dns failure in exception message
 				# requests lib turns nested exceptions into strings
 				if 'Name or service not known' in v.args[0].message:
+					logging.info("DNS resolution failed(1)")
+					return 'dnserror', -1, None, None
+			except:
+				pass
+			try:
+				# look for dns failure in exception message
+				if 'Name or service not known' in v.args[0][1].strerror:
+					logging.info("DNS resolution failed(2)")
 					return 'dnserror', -1, None, None
 			except:
 				pass
