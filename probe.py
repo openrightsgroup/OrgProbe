@@ -13,6 +13,7 @@ from api import *
 from httpqueue import HTTPQueue
 from signing import RequestSigner
 from category import Categorizor
+from accounting import Accounting,OverLimitException
 
 class SelfTestError(Exception):pass
 
@@ -28,6 +29,7 @@ class OrgProbe(object):
 		self.signer = None
 		self.headers = {}
 		self.read_size = 8192 # size of body to read
+		self.verify_ssl = False
 
 		# set up in .configure()
 
@@ -72,6 +74,7 @@ class OrgProbe(object):
 	def configure(self):
 		self.get_api_config()
 		self.get_ip_status()
+		self.setup_accounting()
 		self.run_selftest()
 		self.setup_queue()
 		
@@ -121,12 +124,22 @@ class OrgProbe(object):
 				break
 		else:
 			logging.error("No rules found for ISP: %s", self.isp)
-			if self.probe.get('skip_rules','False') == 'True':
+			if self.probe.get('skip_rules','false').lower() == 'true':
 				self.rules = []
 			else:
 				sys.exit(1)
 
 		logging.info("Got rules: %s", self.rules)
+
+	def setup_accounting(self):
+		if not self.config.has_section('accounting'):
+			self.counters = None
+			return
+		self.counters = Accounting(self.config, self.isp.lower().replace(' ','_'))
+		self.counters.check()
+		
+			
+
 
 	def setup_queue(self):
 		if not self.config.has_section('amqp'):
@@ -178,6 +191,8 @@ class OrgProbe(object):
                 else:
                     body = req.content
 		logging.info("Read body length: %s", len(body))
+		if self.counters:
+			self.counters.bytes.add(len(body))
 		for rulenum, rule in enumerate(self.rules):
 			if self.match_rule(req, body, rule) is True:
 				logging.info("Matched rule: %s; blocked", rule)
@@ -252,10 +267,12 @@ class OrgProbe(object):
 		}
 
 		self.queue.send(report, urlhash)
+		if self.counters:
+			self.counters.check()
 
 
 	def run_selftest(self):
-		if self.probe.get('selftest', 'True')  == 'False':
+		if self.probe.get('selftest', 'true').lower()  != 'true':
 			return
 		
 		for url in self.apiconfig['self-test']['must-allow']:
@@ -275,6 +292,9 @@ class OrgProbe(object):
 		if data is None:
 			self.delay(5)
 			return
+
+		if self.counters:
+			self.counters.requests.add(1)
 
 
 		if 'url' in data:
@@ -311,14 +331,17 @@ class OrgProbe(object):
 			self.read_size = int(self.probe['read_size'])
 
 		if 'verify_ssl' in self.probe:
-			self.verify_ssl = (self.probe['verify_ssl'] == 'true')
+			self.verify_ssl = (self.probe['verify_ssl'].lower() == 'true')
 
 		self.configure()
 
 		try:
 			self.queue.drive(self.run_test)
 			logging.info("Exiting cleanly")
+		except OverLimitException:
+			logging.info("Exiting due to byte limit")
 		finally:
+			logging.info("Shutting down heartbeat")
 			if self.hb is not None:
 				self.hb.stop_thread()
 

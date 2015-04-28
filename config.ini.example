@@ -57,3 +57,7 @@ selftest = True		#whether to run the self-test or not
 
 # verify SSL
 # verify_ssl = true
+
+[accounting]
+redis_server=localhost
+limit=2000000000
