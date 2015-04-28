@@ -9,7 +9,7 @@ class Counter(object):
 	def __init__(self, r, network_name, name):
 		self.r = r
 		self.name = network_name + '.' + name
-		self.value = self.get()
+		self.value = self.get() or 0
 
 	def add(self, amount):
 		self.value = self.r.incr(self.name, amount)
