@@ -135,7 +135,7 @@ class OrgProbe(object):
 		if not self.config.has_section('accounting'):
 			self.counters = None
 			return
-		self.counters = Accounting(self.config, self.isp.lower().replace(' ','_'))
+		self.counters = Accounting(self.config, self.isp.lower().replace(' ','_'), self.probe)
 		self.counters.check()
 		
 			

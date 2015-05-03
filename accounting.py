@@ -22,10 +22,11 @@ class Counter(object):
 
 
 class Accounting(object):
-	def __init__(self, config, network):
+	def __init__(self, config, network, probe):
 		self.r = redis.StrictRedis(config.get('accounting','redis_server'))
 		self.config = config
 		self.network = network
+		self.probe = probe
 
 		self.r.sadd('networks',network)
 
@@ -34,9 +35,10 @@ class Accounting(object):
 
 	def check(self):
 		try:
-			if self.config.getint('accounting','limit') < int(self.bytes.value):
-				logging.fatal("Byte count is over limit: %d; shutting down", int(self.bytes.value))
-				raise OverLimitException
+			if 'limit' in self.probe:
+				if int(self.probe.get['limit']) < int(self.bytes.value):
+					logging.fatal("Byte count is over limit: %d; shutting down", int(self.bytes.value))
+					raise OverLimitException
 		except OverLimitException:
 			raise
 		except Exception,v:
