@@ -36,7 +36,7 @@ class Accounting(object):
 	def check(self):
 		try:
 			if 'limit' in self.probe:
-				if int(self.probe.get['limit']) < int(self.bytes.value):
+				if int(self.probe['limit']) < int(self.bytes.value):
 					logging.fatal("Byte count is over limit: %d; shutting down", int(self.bytes.value))
 					raise OverLimitException
 		except OverLimitException:
