@@ -1,8 +1,8 @@
-
 import unittest
 
 from category import Categorizor
 from probe import OrgProbe
+
 
 class FakeRequest(object):
 	def __init__(self, url, status_code, history = None):
@@ -10,6 +10,8 @@ class FakeRequest(object):
 		self.url = url
 		if history:
 			self.history = history
+		self.headers = {"content-type": "text/html; charset=utf-8"}
+		self.iter_content = lambda x: ["test content"].__iter__()
 
 
 class QueryStringCategorizorTests(unittest.TestCase):
@@ -57,19 +59,17 @@ class ProbeRulesTests(unittest.TestCase):
 		self.probe.categorizor = Categorizor('querystring:urlclassname:base64')
 
 	def testMatch(self):
-		status, code, category = self.probe.test_response(self.TEST_REQ)
+		status, code, category, blocktype = self.probe.test_response(self.TEST_REQ)
 		self.assertEquals(status, "blocked")
 		self.assertEquals(code, 302)
 		self.assertEquals(category, "Pornography & Violence")
 
 	def testNoMatch(self):
-		status, code, category = self.probe.test_response(FakeRequest('http://example.com',200))
+		status, code, category, blocktype = self.probe.test_response(FakeRequest('http://example.com',200))
 		self.assertEquals(status, "ok")
 		self.assertEquals(code, 200)
 		self.assertIsNone(category)
-		
 
-	
 
 if __name__ == '__main__':
 	unittest.main()
