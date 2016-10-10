@@ -31,6 +31,7 @@ class OrgProbe(object):
         self.signer = None
         self.headers = {}
         self.read_size = 8192  # size of body to read
+        self.verify_ssl = False
 
         # set up in .configure()
 
@@ -131,7 +132,7 @@ class OrgProbe(object):
                 break
         else:
             logging.error("No rules found for ISP: %s", self.isp)
-            if self.probe.get('skip_rules', 'False') == 'True':
+            if self.probe.get('skip_rules', 'false').lower() == 'true':
                 self.rules = []
             else:
                 sys.exit(1)
@@ -267,7 +268,7 @@ class OrgProbe(object):
         self.queue.send(report, urlhash)
 
     def run_selftest(self):
-        if self.probe.get('selftest', 'True') == 'False':
+        if self.probe.get('selftest', 'true').lower() != 'true':
             return
 
         for url in self.apiconfig['self-test']['must-allow']:
@@ -321,7 +322,7 @@ class OrgProbe(object):
             self.read_size = int(self.probe['read_size'])
 
         if 'verify_ssl' in self.probe:
-            self.verify_ssl = (self.probe['verify_ssl'] == 'true')
+            self.verify_ssl = (self.probe['verify_ssl'].lower() == 'true')
 
         self.configure()
 
