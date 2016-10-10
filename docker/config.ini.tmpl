@@ -1,0 +1,29 @@
+[global]
+interval = 0
+
+[api]
+host=api.blocked.org.uk
+port=443
+https=True
+version=1.2
+
+[amqp]
+host=api.blocked.org.uk
+port=5672
+ssl=True
+userid=AMQP_USER
+passwd=AMQP_PASSWD
+
+
+[public]
+uuid=PROBE_UUID
+secret=PROBE_SECRET
+#heartbeat=240
+selftest = true
+lifetime = 500
+queue = public
+#network = {{network_name}}
+read_size=0
+verify_ssl=false
+
+
