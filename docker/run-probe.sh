@@ -11,11 +11,15 @@ then
 
   # use API_HOST if defined
   API_HOST=${API_HOST:-api.blocked.org.uk}
+  API_PORT=${API_PORT:-443}
+  API_HTTPS=${API_HTTPS:-True}
 
   # create config file from template
   cp $PRBDIR/config.ini.tmpl $CONFIG
   sed -i $CONFIG \
     -e "s/API_HOST/$API_HOST/" \
+    -e "s/API_PORT/$API_PORT/" \
+    -e "s/API_HTTPS/$API_HTTPS/" \
     -e "s/PROBE_UUID/$PROBE_UUID/" \
     -e "s/PROBE_SECRET/$PROBE_SECRET/" \
     -e "s/AMQP_USER/$AMQP_USER/" \
