@@ -5,7 +5,8 @@ RUN apt-get update
 RUN apt-get -y install python-requests \
     python-pyasn1 \
     #python-ndg-httpsclient \
-    python-amqplib
+    python-amqplib \
+    python-redis
 RUN apt-get clean
 
 RUN mkdir /usr/local/probe
