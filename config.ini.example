@@ -26,7 +26,11 @@ secret = foobarbazquux00foobarbazquux
 queue = org
 selftest = True		#whether to run the self-test or not
 
+
 ## completely optional per-probe settings - uncomment to enable
+
+# byte limit for operation (see accounting)
+# #limit=2000000000
 
 # page body size to read (0 == read all)
 # read_size = 8192
@@ -57,3 +61,10 @@ selftest = True		#whether to run the self-test or not
 
 # verify SSL
 # verify_ssl = true
+
+
+# Uncomment to impose a byte limit on downloads.  When the limit is reached, the 
+# probe shuts down.  Counters are stored in a redis instance, given below
+# [accounting]
+# #redis_server=localhost
+
