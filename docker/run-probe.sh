@@ -8,6 +8,6 @@ then
   python $PRBDIR/configure.py -o $CONFIG
 fi
 
-exec /usr/bin/python $PRBDIR/__main__.py -c $PRBDIR/config.ini
+exec /usr/bin/python $PRBDIR/__main__.py -c $PRBDIR/config.ini "*"
 
 
