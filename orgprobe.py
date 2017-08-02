@@ -3,8 +3,7 @@ import getopt
 import ConfigParser
 import logging
 
-from probe import OrgProbe
-from api import APIRequest
+from OrgProbe import Probe, APIRequest
 
 optlist, optargs = getopt.getopt(sys.argv[1:],
                                  'c:v',
@@ -45,14 +44,7 @@ if config.has_section('api'):
     apiconfig('port', config.getint)
     apiconfig('version', config.get)
 
-probe = OrgProbe(config)
+probe = Probe(config)
 
-if '--register' in opts:
-    probe.register(opts, config)
-    with open(configfile, 'w') as fp:
-        config.write(fp)
-    sys.exit(0)
-
-else:
-    logging.info("Entering run mode")
-    sys.exit(probe.run(optargs))
+logging.info("Entering run mode")
+sys.exit(probe.run(optargs))

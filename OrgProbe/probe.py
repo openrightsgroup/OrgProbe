@@ -9,7 +9,6 @@ import contextlib
 
 from api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
     ConfigRequest
-from httpqueue import HTTPQueue
 from signing import RequestSigner
 from category import Categorizor
 from accounting import Accounting,OverLimitException
@@ -18,7 +17,7 @@ class SelfTestError(Exception):
     pass
 
 
-class OrgProbe(object):
+class Probe(object):
     DEFAULT_USERAGENT = 'OrgProbe/0.9.4 (+http://www.blocked.org.uk)'
 
     def __init__(self, config):
@@ -45,34 +44,6 @@ class OrgProbe(object):
         self.hb = None
         pass
 
-    def register(self, opts):
-        logging.warning("Untested code")
-        return
-        req = PrepareProbeRequest(opts['--secret'], email=opts['--email'])
-        code, data = req.execute()
-
-        print code, data
-
-        if data['success'] is not True:
-            logging.error("Unable to prepare probe: %s", data)
-            return
-
-        probe_uuid = hashlib.md5(
-            opts['--seed'] + '-' + data['probe_hmac']).hexdigest()
-        req2 = RegisterProbeRequest(opts['--secret'], email=opts['--email'],
-                                    probe_seed=opts['--seed'],
-                                    probe_uuid=probe_uuid
-                                    )
-        code2, data2 = req2.execute()
-        print code2, data2
-
-        if data2['success'] is not True:
-            logging.error("Unable to prepare probe: %s", data2)
-            return
-
-        self.config.add_section(opts['--seed'])
-        self.config.set(opts['--seed'], 'uuid', probe_uuid)
-        self.config.set(opts['--seed'], 'secret', data2['secret'])
 
     def configure(self):
         self.get_api_config()
@@ -149,28 +120,17 @@ class OrgProbe(object):
         self.counters.check()
 
     def setup_queue(self):
-        if not self.config.has_section('amqp'):
-            logging.info("Using HTTP Queue")
-            self.queue = HTTPQueue(self.probe['uuid'], self.signer, self.isp)
-        else:
-            from amqpqueue import AMQPQueue
-            opts = dict(self.config.items('amqp'))
-            logging.info("Setting up AMQP with options: %s", opts)
-            lifetime = int(self.probe['lifetime']) if 'lifetime' in \
-                                                      self.probe else None
-            self.queue = AMQPQueue(opts,
-                                   self.isp.lower().replace(' ', '_'),
-                                   self.probe.get('queue', 'org'),
-                                   self.signer,
-                                   lifetime
-                                   )
-            if 'heartbeat' in self.probe:
-                from heartbeat import Heartbeat
-                self.hb = Heartbeat(self.queue.conn,
-                                    int(self.probe['heartbeat']),
-                                    self.probe['uuid']
-                                    )
-                self.hb.start_thread()
+        from amqpqueue import AMQPQueue
+        opts = dict(self.config.items('amqp'))
+        logging.info("Setting up AMQP with options: %s", opts)
+        lifetime = int(self.probe['lifetime']) if 'lifetime' in \
+                                                  self.probe else None
+        self.queue = AMQPQueue(opts,
+                               self.isp.lower().replace(' ', '_'),
+                               self.probe.get('queue', 'org'),
+                               self.signer,
+                               lifetime
+                               )
 
     def match_rule(self, req, body, rule):
         if rule.startswith('re:'):
@@ -293,9 +253,7 @@ class OrgProbe(object):
                 raise SelfTestError
 
     def delay(self, multiplier=1):
-        # only httpqueue requires sleep intervals at the moment
-        if isinstance(self.queue, HTTPQueue):
-            time.sleep(self.config.getint('global', 'interval') * multiplier)
+        pass
 
     def run_test(self, data):
         if data is None:
@@ -349,6 +307,3 @@ class OrgProbe(object):
             logging.info("Exiting cleanly")
         except OverLimitException:
             logging.info("Exiting due to byte limit")
-        finally:
-            if self.hb is not None:
-                self.hb.stop_thread()
