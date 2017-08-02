@@ -66,7 +66,7 @@ class Probe(object):
         if code == 200:
             logging.info("Loaded config: %s", data['version'])
             self.apiconfig = data
-            print >> sys.stderr, data
+            logging.debug("Got config: %s", data)
         elif code == 304:
             pass
         else:
@@ -129,7 +129,8 @@ class Probe(object):
                                self.isp.lower().replace(' ', '_'),
                                self.probe.get('queue', 'org'),
                                self.signer,
-                               lifetime
+                               self.run_test,
+                               lifetime, 
                                )
 
     def match_rule(self, req, body, rule):
@@ -252,14 +253,7 @@ class Probe(object):
             if self.test_url(url)[0] != 'blocked':
                 raise SelfTestError
 
-    def delay(self, multiplier=1):
-        pass
-
     def run_test(self, data):
-        if data is None:
-            self.delay(5)
-            return
-
         if self.counters:
             self.counters.requests.add(1)
 
@@ -270,11 +264,10 @@ class Probe(object):
             for url in data['urls']:
                 self.test_and_report_url(url['url'], data['hash'])
 
-        self.delay()
 
     def run(self, args):
-        if len(args) > 0:
-            self.probename = args[0]
+        if args.profile:
+            self.probename = args.profile
         else:
             try:
                 self.probename = [x for x in self.config.sections() if
@@ -301,9 +294,9 @@ class Probe(object):
             self.verify_ssl = (self.probe['verify_ssl'].lower() == 'true')
 
         self.configure()
+        self.queue.start()
 
-        try:
-            self.queue.drive(self.run_test)
-            logging.info("Exiting cleanly")
-        except OverLimitException:
-            logging.info("Exiting due to byte limit")
+        #try:
+        #    logging.info("Exiting cleanly")
+        #except OverLimitException:
+        #    logging.info("Exiting due to byte limit")

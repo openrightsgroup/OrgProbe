@@ -2,21 +2,22 @@ import json
 
 import logging
 
-import amqplib.client_0_8 as amqp
-
+import pika
 
 class AMQPQueue(object):
     SIG_KEYS = ["probe_uuid", "url", "status", "date", "config"]
 
-    def __init__(self, opts, network, queue_name, signer, lifetime=None):
-        self.conn = amqp.Connection(
-            userid=opts['userid'],
-            password=opts['passwd'],
-            host=opts['host']
-        )
+    def __init__(self, opts, network, queue_name, signer, test_method, lifetime=None):
+        creds = pika.PlainCredentials(
+            opts['userid'],
+            opts['passwd'],
+            )
+        self.params = pika.ConnectionParameters(
+            host=opts['host'],
+            credentials=creds
+            )
         self.network = network
         logging.debug("Opening AMQP connection")
-        self.ch = self.conn.channel()
         self.signer = signer
         self.queue_name = 'url.' + network + '.' + queue_name
         logging.info("Listening on queue: %s", self.queue_name)
@@ -24,59 +25,60 @@ class AMQPQueue(object):
         self.alive = True
         self.count = 0
         self.prefetch = int(opts['prefetch']) if 'prefetch' in opts else None
+        self.test_method = test_method
 
-    def __iter__(self):
-        """The Queue object can be used as an iterator, to fetch a test URL
-        from the API."""
+    def start(self):
+        self.conn = pika.SelectConnection(
+            self.params,
+            on_open_callback = self.on_open,
+            stop_ioloop_on_close=True
+            )
+        self.conn.ioloop.start()
 
-        while True:
-            msg = self.ch.basic_get(self.queue_name)
-            if msg is None:
-                yield None
-                continue
-            data = json.loads(msg.body)
-            logging.info("Got data: %s", data)
-            self.ch.basic_ack(msg.delivery_tag)
-            yield data
+    def on_open(self, conn):
+        self.conn.channel(self.on_channel_open)
+
+
+    def on_channel_open(self, ch):
+        self.ch = ch
+        if self.prefetch:
+            logging.debug("Setting QOS prefetch to %s", self.prefetch)
+            self.ch.basic_qos(None, 0, int(self.prefetch), False)
+        self.ch.basic_consume(self.decode_msg, queue=self.queue_name)
+
+
+    def decode_msg(self, channel, method, props, msg):
+        # this is a wrapper callback that decodes the json data
+        # before passing it to the probe's real callback
+        data = json.loads(msg)
+        logging.debug("Got data: %s", data)
+        self.ch.basic_ack(method.delivery_tag)
+        self.test_method(data)
+        self.count += 1
+        logging.debug("Count: %s, Lifetime: %s", self.count, self.lifetime)
+        if self.lifetime is not None and self.count > self.lifetime:
+            logging.info("Cancelling subscription due to lifetime expiry")
+            self.ch.basic_cancel(self.on_cancel)
+
+    def on_cancel(self, *args):
+        self.ch.close(self.on_channel_closed)
+
+    def on_channel_closed(self, *args):
+        self.conn.close()
+
 
     def send(self, report, urlhash=None):
         """Sends a report back to the server"""
 
+        return
         report['date'] = self.signer.timestamp()
         report['signature'] = self.signer.get_signature(report, self.SIG_KEYS)
 
-        msgbody = json.dumps(report)
-        msg = amqp.Message(msgbody)
+        msg = json.dumps(report)
         key = 'results.' + self.network + '.' + \
               urlhash if urlhash is not None else ''
         logging.info("Sending result with key: %s", key)
-        self.ch.basic_publish(msg, 'org.blocked', key)
-
-    def drive(self, callback):
-        """ This allows the queue to drive testing, by passing each
-        data item that is fetched from the API to a callback function."""
-
-        def decode(msg):
-            # this is a wrapper callback that decodes the json data
-            # before passing it to the probe's real callback
-            data = json.loads(msg.body)
-            logging.info("Got data: %s", data)
-            self.ch.basic_ack(msg.delivery_tag)
-            callback(data)
-            self.count += 1
-            logging.debug("Count: %s, Lifetime: %s", self.count, self.lifetime)
-            if self.lifetime is not None and self.count > self.lifetime:
-                logging.info("Cancelling subscription due to lifetime expiry")
-                self.alive = False
-
-        if self.prefetch:
-            logging.debug("Setting QOS prefetch to %s", self.prefetch)
-            self.ch.basic_qos(0, int(self.prefetch), False)
-        self.ch.basic_consume(self.queue_name, consumer_tag='consumer1',
-                              callback=decode)
-        while self.alive:
-            # loop while alive, pumping messages
-            self.ch.wait()
+        self.ch.basic_publish( 'org.blocked', key, msg)
 
     def close(self):
         self.conn.close()

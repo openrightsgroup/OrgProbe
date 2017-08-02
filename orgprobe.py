@@ -1,17 +1,19 @@
 import sys
-import getopt
+import argparse
 import ConfigParser
 import logging
 
 from OrgProbe import Probe, APIRequest
 
-optlist, optargs = getopt.getopt(sys.argv[1:],
-                                 'c:v',
-                                 ['register', 'email=', 'secret=', 'seed=']
-                                 )
-opts = dict(optlist)
+parser = argparse.ArgumentParser()
+parser.add_argument('--config', '-c', default='config.ini',
+        help="path to config file")
+parser.add_argument('--verbose', '-v', action='store_true', help="Verbose operation")
+parser.add_argument(dest='profile', nargs='?')
+args = parser.parse_args()
+
 logging.basicConfig(
-    level=logging.DEBUG if '-v' in opts else logging.INFO,
+    level=logging.DEBUG if args.verbose else logging.INFO,
     datefmt='[%Y-%m-%d %H:%M:%S]',
     format='%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s')
 
@@ -19,10 +21,9 @@ logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(
     logging.ERROR)
 
-configfile = opts.get('-c', 'config.ini')
 config = ConfigParser.ConfigParser()
-loaded = config.read([configfile])
-logging.info("Loaded %s config files from %s", loaded, configfile)
+loaded = config.read([args.config])
+logging.info("Loaded %s config files from %s", loaded, args.config)
 
 if not config.has_section('global'):
     config.add_section('global')
@@ -47,4 +48,4 @@ if config.has_section('api'):
 probe = Probe(config)
 
 logging.info("Entering run mode")
-sys.exit(probe.run(optargs))
+sys.exit(probe.run(args))
