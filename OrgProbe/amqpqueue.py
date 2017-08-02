@@ -44,7 +44,7 @@ class AMQPQueue(object):
         if self.prefetch:
             logging.debug("Setting QOS prefetch to %s", self.prefetch)
             self.ch.basic_qos(None, 0, int(self.prefetch), False)
-        self.ch.basic_consume(self.decode_msg, queue=self.queue_name)
+        self.consumer_tag = self.ch.basic_consume(self.decode_msg, queue=self.queue_name)
 
 
     def decode_msg(self, channel, method, props, msg):
@@ -56,16 +56,16 @@ class AMQPQueue(object):
         self.test_method(data)
         self.count += 1
         logging.debug("Count: %s, Lifetime: %s", self.count, self.lifetime)
-        if self.lifetime is not None and self.count > self.lifetime:
+        if self.lifetime is not None and self.count >= self.lifetime:
             logging.info("Cancelling subscription due to lifetime expiry")
-            self.ch.basic_cancel(self.on_cancel)
+            self.ch.basic_cancel(self.on_cancel, self.consumer_tag)
 
     def on_cancel(self, *args):
-        self.ch.close(self.on_channel_closed)
-
-    def on_channel_closed(self, *args):
+        self.ch.close()
         self.conn.close()
 
+    def close(self):
+        self.conn.close()
 
     def send(self, report, urlhash=None):
         """Sends a report back to the server"""
@@ -80,5 +80,3 @@ class AMQPQueue(object):
         logging.info("Sending result with key: %s", key)
         self.ch.basic_publish( 'org.blocked', key, msg)
 
-    def close(self):
-        self.conn.close()
