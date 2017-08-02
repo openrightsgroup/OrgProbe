@@ -7,11 +7,11 @@ import requests
 import hashlib
 import contextlib
 
-from api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
+from .api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
     ConfigRequest
-from signing import RequestSigner
-from category import Categorizor
-from accounting import Accounting,OverLimitException
+from .signing import RequestSigner
+from .category import Categorizor
+from .accounting import Accounting,OverLimitException
 
 class SelfTestError(Exception):
     pass
@@ -192,16 +192,16 @@ class Probe(object):
             )) as req:
                 try:
                     return self.test_response(req)
-                except Exception, v:
+                except Exception as v:
                     logging.error("Response test error: %s", v)
                     raise
-        except (requests.exceptions.SSLError,), v:
+        except requests.exceptions.SSLError as v:
             logging.warn("SSL Error: %s", v)
             return 'sslerror', -1, None, None
-        except (requests.exceptions.Timeout,), v:
+        except requests.exceptions.Timeout as v:
             logging.warn("Connection timeout: %s", v)
             return 'timeout', -1, None, None
-        except Exception, v:
+        except Exception as v:
             logging.warn("Connection error: %s", v)
             try:
                 # look for dns failure in exception message

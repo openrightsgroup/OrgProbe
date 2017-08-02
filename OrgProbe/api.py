@@ -53,7 +53,7 @@ class APIRequest(object):
                 rq = requests.get(url, params=self.args)
             else:
                 rq = requests.post(url, data=self.args)
-        except Exception, v:
+        except Exception as v:
             logging.error("API Error: %s", v)
             raise
 

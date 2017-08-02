@@ -1,6 +1,9 @@
 import sys
 import argparse
-import ConfigParser
+try:
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
 import logging
 
 from OrgProbe import Probe, APIRequest
@@ -21,7 +24,7 @@ logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(
     logging.ERROR)
 
-config = ConfigParser.ConfigParser()
+config = ConfigParser()
 loaded = config.read([args.config])
 logging.info("Loaded %s config files from %s", loaded, args.config)
 

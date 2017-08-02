@@ -41,7 +41,7 @@ class Accounting(object):
                     raise OverLimitException
         except OverLimitException:
             raise
-        except Exception,v:
+        except Exception as v:
             logging.warn("Limit check exception: %s", repr(v))
             pass
 

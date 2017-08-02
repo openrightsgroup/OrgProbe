@@ -1,3 +1,3 @@
 
-from api import APIRequest
-from probe import Probe
+from .api import APIRequest
+from .probe import Probe
