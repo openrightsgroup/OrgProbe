@@ -216,6 +216,7 @@ class Probe(object):
         self.queue.send(report, urlhash)
         if self.counters:
             self.counters.check()
+            self.counters.bytes.add(result.body_length)
 
 
     def run_selftest(self):
@@ -223,10 +224,10 @@ class Probe(object):
             return
 
         for url in self.apiconfig['self-test']['must-allow']:
-            if self.test_url(url)[0] != 'ok':
+            if self.test_url(url).status != 'ok':
                 raise SelfTestError
         for url in self.apiconfig['self-test']['must-block']:
-            if self.test_url(url)[0] != 'blocked':
+            if self.test_url(url).status != 'blocked':
                 raise SelfTestError
 
     def run_test(self, data):

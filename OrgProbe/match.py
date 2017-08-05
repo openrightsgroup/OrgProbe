@@ -41,8 +41,6 @@ class RulesMatcher(object):
             # we're not downloading images
             body = ''
         logging.debug("Read body length: %s", len(body))
-        #if self.counters:
-        #    self.counters.bytes.add(len(body))
         for rulenum, rule in enumerate(self.rules):
             if self.match_rule(req, body, rule) is True:
                 logging.info("Matched rule: %s; blocked", rule)
@@ -55,10 +53,12 @@ class RulesMatcher(object):
                         else req.status_code,
                     category,
                     self.blocktype[rulenum] if self.blocktype else None,
-                    self.extract_title(body)
+                    self.extract_title(body),
+                    body_length = len(body)
                 )
 
-            return Result('ok',  req.status_code, title=self.extract_title(body))
+            return Result('ok',  req.status_code, title=self.extract_title(body),
+                    body_length=len(body))
 
     def extract_title(self, content):
         match = re.search(b'<title>(.*?)</title', content, re.S+re.I+re.M)
