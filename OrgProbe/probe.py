@@ -5,6 +5,7 @@ import time
 import logging
 import requests
 import hashlib
+import socket
 import contextlib
 
 from .api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
@@ -14,6 +15,7 @@ from .category import Categorizor
 from .accounting import Accounting,OverLimitException
 from .match import RulesMatcher
 from .amqpqueue import AMQPQueue
+from .result import Result
 
 class SelfTestError(Exception):
     pass
@@ -31,7 +33,6 @@ class Probe(object):
         self.probe = None
         self.signer = None
         self.headers = {}
-        self.read_size = 8192  # size of body to read
         self.verify_ssl = False
 
         # set up in .configure()
@@ -109,7 +110,6 @@ class Probe(object):
                     self.rules,
                     blocktype,
                     categorizor,
-                    self.read_size
                     )
                 break
         else:
@@ -154,16 +154,27 @@ class Probe(object):
                     stream=True
             )) as req:
                 try:
-                    return self.rules_matcher.test_response(req)
+                    try:
+                        ip = req.raw.connection.sock.getpeername()[0]
+                        logging.info("Got IP: %s", ip)
+                    except Exception as exc:
+                        logging.debug("IP trace error: %s", exc)
+                        ip=None
+
+                    result = self.rules_matcher.test_response(req)
+                    result.ip = ip
+                    return result
                 except Exception as v:
                     logging.error("Response test error: %s", v)
                     raise
         except requests.exceptions.SSLError as v:
             logging.warn("SSL Error: %s", v)
-            return 'sslerror', -1, None, None
+            return Result('sslerror', -1)
+
         except requests.exceptions.Timeout as v:
             logging.warn("Connection timeout: %s", v)
-            return 'timeout', -1, None, None
+            return Result('timeout', -1)
+        
         except Exception as v:
             logging.warn("Connection error: %s", v)
             try:
@@ -171,34 +182,35 @@ class Probe(object):
                 # requests lib turns nested exceptions into strings
                 if 'Name or service not known' in v.args[0].message:
                     logging.info("DNS resolution failed(1)")
-                    return 'dnserror', -1, None, None
+                    return Result('dnserror', -1)
             except:
                 pass
             try:
                 # look for dns failure in exception message
                 if 'Name or service not known' in v.args[0][1].strerror:
                     logging.info("DNS resolution failed(2)")
-                    return 'dnserror', -1, None, None
+                    return Result('dnserror', -1)
             except:
                 pass
-            raise
-            return 'error', -1, None, None
+            return Result('error', -1)
 
     def test_and_report_url(self, url, urlhash=None):
-        result, code, category, blocktype = self.test_url(url)
+        result = self.test_url(url)
 
-        logging.info("Logging result with ORG: %s, %s", result, code)
+        logging.info("Logging result: %s", result)
 
         report = {
             'network_name': self.isp,
             'ip_network': self.ip,
             'url': url,
-            'http_status': code,
-            'status': result,
+            'http_status': result.code,
+            'status': result.status,
             'probe_uuid': self.probe['uuid'],
             'config': self.apiconfig['version'],
-            'category': category or '',
-            'blocktype': blocktype or '',
+            'category': result.category or '',
+            'blocktype': result.type or '',
+            'title': result.title or '',
+            'remote_ip': result.ip or '',
         }
 
         self.queue.send(report, urlhash)
@@ -250,9 +262,6 @@ class Probe(object):
         self.headers = {
             'User-Agent': self.probe.get('useragent', self.DEFAULT_USERAGENT),
         }
-
-        if 'read_size' in self.probe:
-            self.read_size = int(self.probe['read_size'])
 
         if 'verify_ssl' in self.probe:
             self.verify_ssl = (self.probe['verify_ssl'].lower() == 'true')
