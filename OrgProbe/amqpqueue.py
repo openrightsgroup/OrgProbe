@@ -50,7 +50,7 @@ class AMQPQueue(object):
     def decode_msg(self, channel, method, props, msg):
         # this is a wrapper callback that decodes the json data
         # before passing it to the probe's real callback
-        data = json.loads(msg)
+        data = json.loads(msg.decode('utf8'))
         logging.debug("Got data: %s", data)
         self.ch.basic_ack(method.delivery_tag)
         self.test_method(data)

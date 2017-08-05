@@ -12,6 +12,8 @@ from .api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
 from .signing import RequestSigner
 from .category import Categorizor
 from .accounting import Accounting,OverLimitException
+from .match import RulesMatcher
+from .amqpqueue import AMQPQueue
 
 class SelfTestError(Exception):
     pass
@@ -37,11 +39,7 @@ class Probe(object):
         self.apiconfig = None
         self.isp = None
         self.ip = None
-        self.categorizor = None
-        self.blocktype = None
 
-        # set up in .setup_queue()
-        self.hb = None
         pass
 
 
@@ -96,11 +94,23 @@ class Probe(object):
                 if 'category' in rule:
                     logging.info("Creating Categorizor with rule: %s",
                                  rule['category'])
-                    self.categorizor = Categorizor(rule['category'])
+                    categorizor = Categorizor(rule['category'])
+                else:
+                    categorizor = None
+
                 if 'blocktype' in rule:
                     logging.info("Adding blocktype array: %s",
                                  rule['blocktype'])
-                    self.blocktype = rule['blocktype']
+                    blocktype = rule['blocktype']
+                else:
+                    blocktype = None
+
+                self.rules_matcher = RulesMatcher(
+                    self.rules,
+                    blocktype,
+                    categorizor,
+                    self.read_size
+                    )
                 break
         else:
             logging.error("No rules found for ISP: %s", self.isp)
@@ -120,7 +130,6 @@ class Probe(object):
         self.counters.check()
 
     def setup_queue(self):
-        from amqpqueue import AMQPQueue
         opts = dict(self.config.items('amqp'))
         logging.info("Setting up AMQP with options: %s", opts)
         lifetime = int(self.probe['lifetime']) if 'lifetime' in \
@@ -133,52 +142,6 @@ class Probe(object):
                                lifetime, 
                                )
 
-    def match_rule(self, req, body, rule):
-        if rule.startswith('re:'):
-            ruletype, field, pattern = rule.split(':', 2)
-            if field == 'url':
-                value = req.url
-                flags = 0
-            if field == 'body':
-                value = body
-                flags = re.M
-
-            match = re.search(pattern, value, flags)
-            if match is not None:
-                return True
-            return False
-
-        return None
-
-    def test_response(self, req):
-        category = ''
-        if self.read_size > 0:
-            if req.headers['content-type'].lower().startswith('text'):
-                body = req.iter_content(self.read_size).next()
-            else:
-                # we're not downloading images
-                body = ''
-        else:
-            body = req.content
-        logging.info("Read body length: %s", len(body))
-        if self.counters:
-            self.counters.bytes.add(len(body))
-        for rulenum, rule in enumerate(self.rules):
-            if self.match_rule(req, body, rule) is True:
-                logging.info("Matched rule: %s; blocked", rule)
-                if self.categorizor:
-                    category = self.categorizor.categorize(req.url)
-                return (
-                    'blocked',
-                    req.history[-1].status_code if hasattr(req,
-                                                           'history') and len(
-                        req.history) > 0 else req.status_code,
-                    category,
-                    self.blocktype[rulenum] if self.blocktype else None
-                )
-
-        logging.info("Status: OK")
-        return 'ok', req.status_code, None, None
 
     def test_url(self, url):
         logging.info("Testing URL: %s", url)
@@ -188,10 +151,10 @@ class Probe(object):
                     headers=self.headers,
                     timeout=int(self.probe.get('timeout', 5)),
                     verify=self.verify_ssl,
-                    stream=True if self.read_size > 0 else False
+                    stream=True
             )) as req:
                 try:
-                    return self.test_response(req)
+                    return self.rules_matcher.test_response(req)
                 except Exception as v:
                     logging.error("Response test error: %s", v)
                     raise
@@ -218,6 +181,7 @@ class Probe(object):
                     return 'dnserror', -1, None, None
             except:
                 pass
+            raise
             return 'error', -1, None, None
 
     def test_and_report_url(self, url, urlhash=None):
