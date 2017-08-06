@@ -71,7 +71,6 @@ class AMQPQueue(object):
     def send(self, report, urlhash=None):
         """Sends a report back to the server"""
 
-        return
         report['date'] = self.signer.timestamp()
         report['signature'] = self.signer.get_signature(report, self.SIG_KEYS)
 
