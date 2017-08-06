@@ -22,7 +22,7 @@ class SelfTestError(Exception):
 
 
 class Probe(object):
-    DEFAULT_USERAGENT = 'OrgProbe/0.9.4 (+http://www.blocked.org.uk)'
+    DEFAULT_USERAGENT = 'OrgProbe/2.0.0 (+http://www.blocked.org.uk)'
 
     def __init__(self, config):
         self.config = config

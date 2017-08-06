@@ -1,6 +1,5 @@
 
 import logging
-import redis
 
 
 class OverLimitException(Exception): pass
@@ -23,6 +22,7 @@ class Counter(object):
 
 class Accounting(object):
     def __init__(self, config, network, probe):
+        import redis
         self.r = redis.StrictRedis(config.get('accounting','redis_server'))
         self.config = config
         self.network = network
