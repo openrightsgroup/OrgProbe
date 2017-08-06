@@ -14,7 +14,8 @@ class AMQPQueue(object):
             )
         self.params = pika.ConnectionParameters(
             host=opts['host'],
-            credentials=creds
+            credentials=creds,
+            heartbeat_interval=15,
             )
         self.network = network
         logging.debug("Opening AMQP connection")
