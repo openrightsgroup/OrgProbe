@@ -43,7 +43,7 @@ class RulesMatcher(object):
         logging.debug("Read body length: %s", len(body))
         for rulenum, rule in enumerate(self.rules):
             if self.match_rule(req, body, rule) is True:
-                logging.info("Matched rule: %s; blocked", rule)
+                logging.debug("Matched rule: %s; blocked", rule)
                 if self.categorizor:
                     category = self.categorizor.categorize(req.url)
                 return Result(

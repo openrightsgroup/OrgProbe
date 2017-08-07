@@ -160,7 +160,7 @@ class Probe(object):
 
                     try:
                         ip = req.raw.connection.sock.getpeername()[0]
-                        logging.info("Got IP: %s", ip)
+                        logging.debug("Got IP: %s", ip)
                     except Exception as exc:
                         logging.debug("IP trace error: %s", exc)
                         
