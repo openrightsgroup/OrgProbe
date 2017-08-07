@@ -154,15 +154,27 @@ class Probe(object):
                     stream=True
             )) as req:
                 try:
+                    ssl_fingerprint = None
+                    ip = None
+                    ssl_verified = req.raw.connection.is_verified
+
                     try:
                         ip = req.raw.connection.sock.getpeername()[0]
                         logging.info("Got IP: %s", ip)
                     except Exception as exc:
                         logging.debug("IP trace error: %s", exc)
-                        ip=None
+                        
+                    if url.startswith('https'):
+                        try:
+                            ssl_fingerprint = req.raw.connection.sock.connection.get_peer_certificate().digest('sha256')
+                            logging.debug("Got fingerprint: 5s", ssl_fingerprint)
+                        except Exception as exc:
+                            logging.debug("SSL fingerprint error: %s", exc)
 
                     result = self.rules_matcher.test_response(req)
                     result.ip = ip
+                    result.ssl_fingerprint = ssl_fingerprint
+                    result.ssl_verified = ssl_verified
                     return result
                 except Exception as v:
                     logging.error("Response test error: %s", v)
@@ -211,6 +223,8 @@ class Probe(object):
             'blocktype': result.type or '',
             'title': result.title or '',
             'remote_ip': result.ip or '',
+            'ssl_verified': result.ssl_verified,
+            'ssl_fingerprint': result.ssl_fingerprint
         }
 
         self.queue.send(report, urlhash)
