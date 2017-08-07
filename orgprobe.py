@@ -21,18 +21,12 @@ logging.basicConfig(
     format='%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s')
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
-logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(
-    logging.ERROR)
+logging.getLogger('pika').setLevel(logging.ERROR)
+logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.ERROR)
 
 config = ConfigParser()
 loaded = config.read([args.config])
 logging.info("Loaded %s config files from %s", loaded, args.config)
-
-if not config.has_section('global'):
-    config.add_section('global')
-    config.set('global', 'interval', 1)
-    with open(configfile, 'w') as fp:
-        config.write(fp)
 
 if config.has_section('api'):
     def apiconfig(prop, method):
@@ -50,5 +44,5 @@ if config.has_section('api'):
 
 probe = Probe(config)
 
-logging.info("Entering run mode")
+logging.debug("Entering run mode")
 sys.exit(probe.run(args))

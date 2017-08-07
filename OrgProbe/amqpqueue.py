@@ -77,6 +77,6 @@ class AMQPQueue(object):
         msg = json.dumps(report)
         key = 'results.' + self.network + '.' + \
               urlhash if urlhash is not None else ''
-        logging.info("Sending result with key: %s", key)
+        logging.debug("Sending result with key: %s", key)
         self.ch.basic_publish( 'org.blocked', key, msg)
 

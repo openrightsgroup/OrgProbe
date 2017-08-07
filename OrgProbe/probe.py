@@ -80,10 +80,10 @@ class Probe(object):
         req = StatusIPRequest(self.signer, *args,
                               probe_uuid=self.probe['uuid'])
         code, data = req.execute()
-        logging.info("Status: %s, %s", code, data)
+        logging.info("Status: %s; Network=%s", code, data)
         if 'network' in self.probe:
             self.isp = self.probe['network']
-            logging.debug("Overriding network to: %s", self.isp)
+            logging.warn("Overriding network to: %s", self.isp)
         else:
             self.isp = data['isp']
 
@@ -93,14 +93,14 @@ class Probe(object):
             if rule['isp'] == self.isp:
                 self.rules = rule['match']
                 if 'category' in rule:
-                    logging.info("Creating Categorizor with rule: %s",
+                    logging.debug("Creating Categorizor with rule: %s",
                                  rule['category'])
                     categorizor = Categorizor(rule['category'])
                 else:
                     categorizor = None
 
                 if 'blocktype' in rule:
-                    logging.info("Adding blocktype array: %s",
+                    logging.debug("Adding blocktype array: %s",
                                  rule['blocktype'])
                     blocktype = rule['blocktype']
                 else:
@@ -119,7 +119,7 @@ class Probe(object):
             else:
                 sys.exit(1)
 
-        logging.info("Got rules: %s", self.rules)
+        logging.debug("Got rules: %s", self.rules)
 
     def setup_accounting(self):
         if not self.config.has_section('accounting'):
@@ -131,7 +131,7 @@ class Probe(object):
 
     def setup_queue(self):
         opts = dict(self.config.items('amqp'))
-        logging.info("Setting up AMQP with options: %s", opts)
+        logging.debug("Setting up AMQP with options: %s", opts)
         lifetime = int(self.probe['lifetime']) if 'lifetime' in \
                                                   self.probe else None
         self.queue = AMQPQueue(opts,
