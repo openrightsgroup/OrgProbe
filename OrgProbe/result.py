@@ -19,5 +19,7 @@ class Result(object):
 
     def __str__(self):
         return "<Result: " + (" ".join([
-            "{}={}".format(k, getattr(self, k)) for k in self.__slots__
+            "{}=\"{}\"".format(k, getattr(self, k)) 
+            for k in self.__slots__
+            #if k not in ('ssl_fingerprint',)
             ])) + ">"

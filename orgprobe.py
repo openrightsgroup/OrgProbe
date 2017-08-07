@@ -18,7 +18,7 @@ args = parser.parse_args()
 logging.basicConfig(
     level=logging.DEBUG if args.verbose else logging.INFO,
     datefmt='[%Y-%m-%d %H:%M:%S]',
-    format='%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s')
+    format='%(asctime)s\t%(levelname)s\t%(message)s')
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logging.getLogger('pika').setLevel(logging.ERROR)

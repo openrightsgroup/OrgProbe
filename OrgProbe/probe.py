@@ -155,14 +155,10 @@ class Probe(object):
             )) as req:
                 try:
                     ssl_fingerprint = None
-                    ip = None
+                    ip = self.get_peer_address(req)
                     ssl_verified = req.raw.connection.is_verified
 
-                    try:
-                        ip = req.raw.connection.sock.getpeername()[0]
-                        logging.debug("Got IP: %s", ip)
-                    except Exception as exc:
-                        logging.debug("IP trace error: %s", exc)
+                    logging.debug("Got IP: %s", ip)
                         
                     if url.startswith('https'):
                         try:
@@ -206,6 +202,19 @@ class Probe(object):
                 pass
             return Result('error', -1)
 
+    def get_peer_address(self, req):
+        try:
+            # Non-SSL
+            return req.raw.connection.sock.getpeername()[0]
+        except Exception as exc:
+            logging.debug("IP trace error: %s", exc)
+        try:
+            # SSL version
+            return req.raw.connection.sock.socket.getpeername()[0]
+        except Exception as exc:
+            logging.debug("IP trace error: %s", exc)
+
+
     def test_and_report_url(self, url, urlhash=None):
         result = self.test_url(url)
 
@@ -223,9 +232,13 @@ class Probe(object):
             'blocktype': result.type or '',
             'title': result.title or '',
             'remote_ip': result.ip or '',
-            'ssl_verified': result.ssl_verified,
+            'ssl_verified': None,
             'ssl_fingerprint': result.ssl_fingerprint
         }
+        if self.probe.get('verify_ssl','').lower() == 'true':
+            report.update({
+                'ssl_verified': result.ssl_verified,
+                })
 
         self.queue.send(report, urlhash)
         if self.counters:
