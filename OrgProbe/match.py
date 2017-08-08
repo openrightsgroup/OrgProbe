@@ -57,8 +57,8 @@ class RulesMatcher(object):
                     body_length = len(body)
                 )
 
-            return Result('ok',  req.status_code, title=self.extract_title(body),
-                    body_length=len(body))
+        return Result('ok',  req.status_code, title=self.extract_title(body),
+                body_length=len(body))
 
     def extract_title(self, content):
         match = re.search(b'<title>(.*?)</title', content, re.S+re.I+re.M)

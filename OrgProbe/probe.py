@@ -116,6 +116,11 @@ class Probe(object):
             logging.error("No rules found for ISP: %s", self.isp)
             if self.probe.get('skip_rules', 'false').lower() == 'true':
                 self.rules = []
+                self.rules_matcher = RulesMatcher(
+                    self.rules,
+                    [],
+                    None
+                    )
             else:
                 sys.exit(1)
 
@@ -215,10 +220,10 @@ class Probe(object):
             logging.debug("IP trace error: %s", exc)
 
 
-    def test_and_report_url(self, url, urlhash=None):
+    def test_and_report_url(self, url, urlhash=None, request_id=None):
         result = self.test_url(url)
 
-        logging.info("Logging result: %s", result)
+        logging.info("Result: %s; %s", request_id, result)
 
         report = {
             'network_name': self.isp,
@@ -233,7 +238,8 @@ class Probe(object):
             'title': result.title or '',
             'remote_ip': result.ip or '',
             'ssl_verified': None,
-            'ssl_fingerprint': result.ssl_fingerprint
+            'ssl_fingerprint': result.ssl_fingerprint,
+            'request_id': request_id
         }
         if self.probe.get('verify_ssl','').lower() == 'true':
             report.update({
@@ -263,10 +269,10 @@ class Probe(object):
 
 
         if 'url' in data:
-            self.test_and_report_url(data['url'], data['hash'])
+            self.test_and_report_url(data['url'], data['hash'], data.get('request_id'))
         elif 'urls' in data:
             for url in data['urls']:
-                self.test_and_report_url(url['url'], data['hash'])
+                self.test_and_report_url(url['url'], data['hash'], request_id=data.get('request_id'))
 
 
     def run(self, args):
@@ -297,7 +303,3 @@ class Probe(object):
         self.configure()
         self.queue.start()
 
-        #try:
-        #    logging.info("Exiting cleanly")
-        #except OverLimitException:
-        #    logging.info("Exiting due to byte limit")
