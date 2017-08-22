@@ -4,7 +4,7 @@ class Result(object):
     __slots__ = ['status','code','category','type','title','ip','body_length','ssl_verified','ssl_fingerprint']
     def __init__(self, 
             status, code, category=None, type=None, title=None, ip=None, 
-            body_length=0, ssl_verified=False, ssl_fingerprint=None
+            body_length=0, ssl_verified=None, ssl_fingerprint=None
         ):
 
         self.status = status

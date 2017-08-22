@@ -91,7 +91,7 @@ class Probe(object):
 
         for rule in self.apiconfig['rules']:
             if rule['isp'] == self.isp:
-                self.rules = rule['match']
+                rules = rule['match']
                 if 'category' in rule:
                     logging.debug("Creating Categorizor with rule: %s",
                                  rule['category'])
@@ -107,7 +107,7 @@ class Probe(object):
                     blocktype = None
 
                 self.rules_matcher = RulesMatcher(
-                    self.rules,
+                    rules,
                     blocktype,
                     categorizor,
                     )
@@ -115,16 +115,16 @@ class Probe(object):
         else:
             logging.error("No rules found for ISP: %s", self.isp)
             if self.probe.get('skip_rules', 'false').lower() == 'true':
-                self.rules = []
+                rules = []
                 self.rules_matcher = RulesMatcher(
-                    self.rules,
+                    rules,
                     [],
                     None
                     )
             else:
                 sys.exit(1)
 
-        logging.debug("Got rules: %s", self.rules)
+        logging.debug("Got rules: %s", rules)
 
     def setup_accounting(self):
         if not self.config.has_section('accounting'):
@@ -159,13 +159,14 @@ class Probe(object):
                     stream=True
             )) as req:
                 try:
+                    ssl_verified = None
                     ssl_fingerprint = None
                     ip = self.get_peer_address(req)
-                    ssl_verified = req.raw.connection.is_verified
 
                     logging.debug("Got IP: %s", ip)
                         
-                    if url.startswith('https'):
+                    if req.url.startswith('https'):
+                        ssl_verified = req.raw.connection.is_verified
                         try:
                             ssl_fingerprint = req.raw.connection.sock.connection.get_peer_certificate().digest('sha256')
                             logging.debug("Got fingerprint: 5s", ssl_fingerprint)
