@@ -10,7 +10,7 @@ class FakeRequest(object):
         if history:
             self.history = history
         self.headers = {"content-type": "text/html; charset=utf-8"}
-        self.iter_content = lambda x: ["test content"].__iter__()
+        self.iter_content = lambda x: ["test content <title>foo</title>"].__iter__()
 
 
 
@@ -18,7 +18,7 @@ class FakeRequest(object):
 class RulesTests(unittest.TestCase):
     TEST_REQ = FakeRequest(
         "http://www.talktalk.co.uk/notice/parental-controls?" +
-        "accessurl=d3d3LnhoYW1zdGVyLmNvbQ==&"
+        "accessurl=d3d3LnhoYW1zdGVyLmNvbQ==&" +
         "urlclassname=UG9ybm9ncmFwaHkgJiBWaW9sZW5jZQ==",
         200,
         [
@@ -32,7 +32,7 @@ class RulesTests(unittest.TestCase):
                 "notice/parental-controls\\?accessurl",
                 "re:url:^http://www\\.siteblocked\\.org/piratebay\\.html\\?"
             ], 
-            'PARENTAL', 
+            ['PARENTAL','COPYRIGHT'], 
             Categorizor('querystring:urlclassname:base64')
         )
 
@@ -42,6 +42,8 @@ class RulesTests(unittest.TestCase):
         self.assertEquals(result.status, "blocked")
         self.assertEquals(result.code, 302)
         self.assertEquals(result.category, "Pornography & Violence")
+        self.assertEquals(result.title, 'foo')
+        self.assertEquals(result.type, 'PARENTAL')
 
     def testNoMatch(self):
         result = self.matcher.test_response(
@@ -50,4 +52,14 @@ class RulesTests(unittest.TestCase):
         self.assertEquals(result.code, 200)
         self.assertIsNone(result.category)
 
+    def testCopyrightMatch(self):
+        result = self.matcher.test_response(
+            FakeRequest('http://www.siteblocked.org/piratebay.html?',  200,
+                [ FakeRequest('http://example.com', 302) ] 
+                )
+            )
+        self.assertEquals(result.status, "blocked")
+        self.assertEquals(result.code, 302)
+        self.assertIsNone(result.category)
+        self.assertEquals(result.type, 'COPYRIGHT')
 

@@ -46,7 +46,7 @@ class ProbeTests(unittest.TestCase):
     def testTimeout(self):
         # iptables -I INPUT -p tcp --dport 8002 -j DROP
 
-        result = self.probe.test_url('https://localhost:8002')
+        result = self.probe.test_url('http://localhost:8002')
         self.assertEquals(result.status, 'timeout')
         self.assertEquals(result.code, -1)
         self.assertEquals(result.ssl_verified, None)
