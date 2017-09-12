@@ -5,7 +5,9 @@ from OrgProbe.match import RulesMatcher
 import unittest
 import logging
 import requests
-#logging.basicConfig(level=logging.DEBUG)
+
+Probe.LOGGER.setLevel(logging.FATAL)
+
 
 class ProbeTests(unittest.TestCase):
     def setUp(self):

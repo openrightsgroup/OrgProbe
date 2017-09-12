@@ -23,6 +23,7 @@ class SelfTestError(Exception):
 
 class Probe(object):
     DEFAULT_USERAGENT = 'OrgProbe/2.0.0 (+http://www.blocked.org.uk)'
+    LOGGER = logging.getLogger("probe")
 
     def __init__(self, config):
         self.config = config
@@ -55,7 +56,7 @@ class Probe(object):
         if self.probe.get('api_config_file'):
             with open(self.probe['api_config_file']) as fp:
                 self.apiconfig = json.load(fp)
-                logging.info("Loaded config: %s from %s",
+                self.LOGGER.info("Loaded config: %s from %s",
                              self.apiconfig['version'],
                              self.probe['api_config_file'])
 
@@ -63,13 +64,13 @@ class Probe(object):
         req = ConfigRequest(None, self.probe.get('config_version', 'latest'))
         code, data = req.execute()
         if code == 200:
-            logging.info("Loaded config: %s", data['version'])
+            self.LOGGER.info("Loaded config: %s", data['version'])
             self.apiconfig = data
-            logging.debug("Got config: %s", data)
+            self.LOGGER.debug("Got config: %s", data)
         elif code == 304:
             pass
         else:
-            logging.error("Error downloading config: %s, %s", code,
+            self.LOGGER.error("Error downloading config: %s, %s", code,
                           data['error'])
 
     def get_ip_status(self):
@@ -80,10 +81,10 @@ class Probe(object):
         req = StatusIPRequest(self.signer, *args,
                               probe_uuid=self.probe['uuid'])
         code, data = req.execute()
-        logging.info("Status: %s; Network=%s", code, data)
+        self.LOGGER.info("Status: %s; Network=%s", code, data)
         if 'network' in self.probe:
             self.isp = self.probe['network']
-            logging.warn("Overriding network to: %s", self.isp)
+            self.LOGGER.warn("Overriding network to: %s", self.isp)
         else:
             self.isp = data['isp']
 
@@ -93,14 +94,14 @@ class Probe(object):
             if rule['isp'] == self.isp:
                 rules = rule['match']
                 if 'category' in rule:
-                    logging.debug("Creating Categorizor with rule: %s",
+                    self.LOGGER.debug("Creating Categorizor with rule: %s",
                                  rule['category'])
                     categorizor = Categorizor(rule['category'])
                 else:
                     categorizor = None
 
                 if 'blocktype' in rule:
-                    logging.debug("Adding blocktype array: %s",
+                    self.LOGGER.debug("Adding blocktype array: %s",
                                  rule['blocktype'])
                     blocktype = rule['blocktype']
                 else:
@@ -113,7 +114,7 @@ class Probe(object):
                     )
                 break
         else:
-            logging.error("No rules found for ISP: %s", self.isp)
+            self.LOGGER.error("No rules found for ISP: %s", self.isp)
             if self.probe.get('skip_rules', 'false').lower() == 'true':
                 rules = []
                 self.rules_matcher = RulesMatcher(
@@ -124,7 +125,7 @@ class Probe(object):
             else:
                 sys.exit(1)
 
-        logging.debug("Got rules: %s", rules)
+        self.LOGGER.debug("Got rules: %s", rules)
 
     def setup_accounting(self):
         if not self.config.has_section('accounting'):
@@ -136,7 +137,7 @@ class Probe(object):
 
     def setup_queue(self):
         opts = dict(self.config.items('amqp'))
-        logging.debug("Setting up AMQP with options: %s", opts)
+        self.LOGGER.debug("Setting up AMQP with options: %s", opts)
         lifetime = int(self.probe['lifetime']) if 'lifetime' in \
                                                   self.probe else None
         self.queue = AMQPQueue(opts,
@@ -149,7 +150,7 @@ class Probe(object):
 
 
     def test_url(self, url):
-        logging.info("Testing URL: %s", url)
+        self.LOGGER.info("Testing URL: %s", url)
         try:
             with contextlib.closing(requests.get(
                     url,
@@ -163,15 +164,11 @@ class Probe(object):
                     ssl_fingerprint = None
                     ip = self.get_peer_address(req)
 
-                    logging.debug("Got IP: %s", ip)
+                    self.LOGGER.debug("Got IP: %s", ip)
                         
                     if req.url.startswith('https'):
                         ssl_verified = req.raw.connection.is_verified
-                        try:
-                            ssl_fingerprint = req.raw.connection.sock.connection.get_peer_certificate().digest('sha256')
-                            logging.debug("Got fingerprint: 5s", ssl_fingerprint)
-                        except Exception as exc:
-                            logging.debug("SSL fingerprint error: %s", exc)
+                        ssl_fingerprint = self.get_ssl_fingerprint(req)
 
                     result = self.rules_matcher.test_response(req)
                     result.ip = ip
@@ -179,30 +176,30 @@ class Probe(object):
                     result.ssl_verified = ssl_verified
                     return result
                 except Exception as v:
-                    logging.error("Response test error: %s", v)
+                    self.LOGGER.error("Response test error: %s", v)
                     raise
         except requests.exceptions.SSLError as v:
-            logging.warn("SSL Error: %s", v)
+            self.LOGGER.warn("SSL Error: %s", v)
             return Result('sslerror', -1)
 
         except requests.exceptions.Timeout as v:
-            logging.warn("Connection timeout: %s", v)
+            self.LOGGER.warn("Connection timeout: %s", v)
             return Result('timeout', -1)
         
         except Exception as v:
-            logging.warn("Connection error: %s", v)
+            self.LOGGER.warn("Connection error: %s", v)
             try:
                 # look for dns failure in exception message
                 # requests lib turns nested exceptions into strings
                 if 'Name or service not known' in v.args[0].message:
-                    logging.info("DNS resolution failed(1)")
+                    self.LOGGER.info("DNS resolution failed(1)")
                     return Result('dnserror', -1)
             except:
                 pass
             try:
                 # look for dns failure in exception message
                 if 'Name or service not known' in v.args[0][1].strerror:
-                    logging.info("DNS resolution failed(2)")
+                    self.LOGGER.info("DNS resolution failed(2)")
                     return Result('dnserror', -1)
             except:
                 pass
@@ -213,18 +210,27 @@ class Probe(object):
             # Non-SSL
             return req.raw.connection.sock.getpeername()[0]
         except Exception as exc:
-            logging.debug("IP trace error: %s", exc)
+            self.LOGGER.debug("IP trace error: %s", exc)
         try:
             # SSL version
             return req.raw.connection.sock.socket.getpeername()[0]
         except Exception as exc:
-            logging.debug("IP trace error: %s", exc)
+            self.LOGGER.debug("IP trace error: %s", exc)
 
+    def get_ssl_fingerprint(self, req):
+        try:
+            hexstr = hashlib.sha256(req.raw.connection.sock.getpeercert(True)).hexdigest()
+            ssl_fingerprint = ":".join([ hexstr[i:i+2].upper() for i in range(0, len(hexstr), 2) ])
+            self.LOGGER.info("Got fingerprint: %s", ssl_fingerprint)
+            return ssl_fingerprint
+        except Exception as exc:
+            self.LOGGER.debug("SSL fingerprint error: %s", exc)
+            raise
 
     def test_and_report_url(self, url, urlhash=None, request_id=None):
         result = self.test_url(url)
 
-        logging.info("Result: %s; %s", request_id, result)
+        self.LOGGER.info("Result: %s; %s", request_id, result)
 
         report = {
             'network_name': self.isp,
@@ -284,10 +290,10 @@ class Probe(object):
                 self.probename = [x for x in self.config.sections() if
                                   x not in ('amqp', 'api', 'global')][0]
             except IndexError:
-                logging.error("No probe identity configuration found")
+                self.LOGGER.error("No probe identity configuration found")
                 return 1
 
-        logging.info("Using probe: %s", self.probename)
+        self.LOGGER.info("Using probe: %s", self.probename)
 
         self.probe = dict([(x, self.config.get(self.probename, x))
                            for x in self.config.options(self.probename)
