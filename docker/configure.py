@@ -14,6 +14,10 @@ DEFAULTS = {
   'API_HTTPS': 'True'
   }
 
+def envget(key):
+    return env.get(key, DEFAULTS.get(key,None))
+
+
 env = os.environ
 
 parser = argparse.ArgumentParser(description="Script to write OrgProbe config file")
@@ -35,11 +39,11 @@ if missing:
 cfg = ConfigParser.ConfigParser()
 cfg.read([args.template])
 
-cfg.set('api','host', env.get('API_HOST', DEFAULTS['API_HOST']))
-cfg.set('api','port', env.get('API_PORT', DEFAULTS['API_PORT']))
-cfg.set('api','https', env.get('API_HTTPS', DEFAULTS['API_HTTPS']))
+cfg.set('api','host', envget('API_HOST'))
+cfg.set('api','port', envget('API_PORT'))
+cfg.set('api','https', envget('API_HTTPS'))
 
-cfg.set('amqp','host', env.get('API_HOST', DEFAULTS['API_HOST']))
+cfg.set('amqp','host', envget('API_HOST'))
 
 cfg.set('amqp','userid', env['AMQP_USER'])
 cfg.set('amqp','passwd', env['AMQP_PASSWD'])
