@@ -1,5 +1,5 @@
 
-FROM ubuntu:16.04
+FROM debian:8
 
 RUN apt-get update && apt-get -y install python-requests \
     python-pyasn1 \
