@@ -58,6 +58,8 @@ if 'PROBE_QUEUE' in env:
     cfg.set('public','queue',env['PROBE_QUEUE'])
 if 'PROBE_NETWORK' in env:
     cfg.set('public','network', env['PROBE_NETWORK'])
+if 'PROBE_SELFTEST' in env:
+    cfg.set('public','selftest', env['PROBE_SELFTEST'])
 
 with open(args.output,'w') as fp:
     cfg.write(fp)
