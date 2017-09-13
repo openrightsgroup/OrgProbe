@@ -8,6 +8,6 @@ then
   python $PRBDIR/configure.py -o $CONFIG
 fi
 
-exec /usr/local/bin/orgprobe.py -c $PRBDIR/config.ini 
+exec /usr/local/bin/orgprobe -c $PRBDIR/config.ini 
 
 

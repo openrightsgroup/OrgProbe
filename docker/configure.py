@@ -43,7 +43,10 @@ cfg.set('api','host', envget('API_HOST'))
 cfg.set('api','port', envget('API_PORT'))
 cfg.set('api','https', envget('API_HTTPS'))
 
-cfg.set('amqp','host', envget('API_HOST'))
+cfg.set('amqp','host', envget('AMQP_HOST') or envget('API_HOST'))
+if not cfg.get('amqp','host'):
+    print "AMQP host not specified"
+    sys.exit(2)
 
 cfg.set('amqp','userid', env['AMQP_USER'])
 cfg.set('amqp','passwd', env['AMQP_PASSWD'])
