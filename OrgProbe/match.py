@@ -63,4 +63,4 @@ class RulesMatcher(object):
     def extract_title(self, content):
         match = re.search(b'<title>(.*?)</title', content, re.S+re.I+re.M)
         if match:
-            return match.group(1).strip()
+            return match.group(1).decode('utf8','replace').strip()
