@@ -26,6 +26,6 @@ An example config file is included.  You'll need to use the new-user signup and 
 
 If you're running the Blocking-Middleware Vagrant VM, you can start OrgProbe with the config.vagrant.ini config file, which will start a nice fast HTTP-mode poll against the FakeISP set up in the VM database.
 
+## Unit Tests
 
-
-
+To run the unit tests against all currently supported python versions, install `tox` via `pip`, then run via `tox`.

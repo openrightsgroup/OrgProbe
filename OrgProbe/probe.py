@@ -12,10 +12,11 @@ from .api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
     ConfigRequest
 from .signing import RequestSigner
 from .category import Categorizor
-from .accounting import Accounting,OverLimitException
+from .accounting import Accounting, OverLimitException
 from .match import RulesMatcher
 from .amqpqueue import AMQPQueue
 from .result import Result
+
 
 class SelfTestError(Exception):
     pass
@@ -44,7 +45,6 @@ class Probe(object):
 
         pass
 
-
     def configure(self):
         self.get_api_config()
         self.get_ip_status()
@@ -57,8 +57,8 @@ class Probe(object):
             with open(self.probe['api_config_file']) as fp:
                 self.apiconfig = json.load(fp)
                 self.LOGGER.info("Loaded config: %s from %s",
-                             self.apiconfig['version'],
-                             self.probe['api_config_file'])
+                                 self.apiconfig['version'],
+                                 self.probe['api_config_file'])
 
             return
         req = ConfigRequest(None, self.probe.get('config_version', 'latest'))
@@ -71,7 +71,7 @@ class Probe(object):
             pass
         else:
             self.LOGGER.error("Error downloading config: %s, %s", code,
-                          data['error'])
+                              data['error'])
 
     def get_ip_status(self):
         try:
@@ -95,14 +95,14 @@ class Probe(object):
                 rules = rule['match']
                 if 'category' in rule:
                     self.LOGGER.debug("Creating Categorizor with rule: %s",
-                                 rule['category'])
+                                      rule['category'])
                     categorizor = Categorizor(rule['category'])
                 else:
                     categorizor = None
 
                 if 'blocktype' in rule:
                     self.LOGGER.debug("Adding blocktype array: %s",
-                                 rule['blocktype'])
+                                      rule['blocktype'])
                     blocktype = rule['blocktype']
                 else:
                     blocktype = None
@@ -111,7 +111,7 @@ class Probe(object):
                     rules,
                     blocktype,
                     categorizor,
-                    )
+                )
                 break
         else:
             self.LOGGER.error("No rules found for ISP: %s", self.isp)
@@ -121,7 +121,7 @@ class Probe(object):
                     rules,
                     [],
                     None
-                    )
+                )
             else:
                 sys.exit(1)
 
@@ -131,8 +131,8 @@ class Probe(object):
         if not self.config.has_section('accounting'):
             self.counters = None
             return
-        self.counters = Accounting(self.config, 
-            self.isp.lower().replace(' ','_'), self.probe)
+        self.counters = Accounting(self.config,
+                                   self.isp.lower().replace(' ', '_'), self.probe)
         self.counters.check()
 
     def setup_queue(self):
@@ -145,9 +145,8 @@ class Probe(object):
                                self.probe.get('queue', 'org'),
                                self.signer,
                                self.run_test,
-                               lifetime, 
+                               lifetime,
                                )
-
 
     def test_url(self, url):
         self.LOGGER.info("Testing URL: %s", url)
@@ -165,7 +164,7 @@ class Probe(object):
                     ip = self.get_peer_address(req)
 
                     self.LOGGER.debug("Got IP: %s", ip)
-                        
+
                     if req.url.startswith('https'):
                         ssl_verified = req.raw.connection.is_verified
                         ssl_fingerprint = self.get_ssl_fingerprint(req)
@@ -185,7 +184,7 @@ class Probe(object):
         except requests.exceptions.Timeout as v:
             self.LOGGER.warn("Connection timeout: %s", v)
             return Result('timeout', -1)
-        
+
         except Exception as v:
             self.LOGGER.warn("Connection error: %s", v)
             try:
@@ -220,7 +219,7 @@ class Probe(object):
     def get_ssl_fingerprint(self, req):
         try:
             hexstr = hashlib.sha256(req.raw.connection.sock.getpeercert(True)).hexdigest()
-            ssl_fingerprint = ":".join([ hexstr[i:i+2].upper() for i in range(0, len(hexstr), 2) ])
+            ssl_fingerprint = ":".join([hexstr[i:i + 2].upper() for i in range(0, len(hexstr), 2)])
             self.LOGGER.info("Got fingerprint: %s", ssl_fingerprint)
             return ssl_fingerprint
         except Exception as exc:
@@ -248,16 +247,15 @@ class Probe(object):
             'ssl_fingerprint': result.ssl_fingerprint,
             'request_id': request_id
         }
-        if self.probe.get('verify_ssl','').lower() == 'true':
+        if self.probe.get('verify_ssl', '').lower() == 'true':
             report.update({
                 'ssl_verified': result.ssl_verified,
-                })
+            })
 
         self.queue.send(report, urlhash)
         if self.counters:
             self.counters.check()
             self.counters.bytes.add(result.body_length)
-
 
     def run_selftest(self):
         if self.probe.get('selftest', 'true').lower() != 'true':
@@ -274,13 +272,11 @@ class Probe(object):
         if self.counters:
             self.counters.requests.add(1)
 
-
         if 'url' in data:
             self.test_and_report_url(data['url'], data['hash'], data.get('request_id'))
         elif 'urls' in data:
             for url in data['urls']:
                 self.test_and_report_url(url['url'], data['hash'], request_id=data.get('request_id'))
-
 
     def run(self, args):
         if args.profile:
@@ -309,4 +305,3 @@ class Probe(object):
 
         self.configure()
         self.queue.start()
-

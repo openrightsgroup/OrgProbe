@@ -1,12 +1,9 @@
-import json
-
 class Result(object):
-    __slots__ = ['status','code','category','type','title','ip','body_length','ssl_verified','ssl_fingerprint']
-    def __init__(self, 
-            status, code, category=None, type=None, title=None, ip=None, 
-            body_length=0, ssl_verified=None, ssl_fingerprint=None
-        ):
+    __slots__ = ['status', 'code', 'category', 'type', 'title', 'ip', 'body_length', 'ssl_verified', 'ssl_fingerprint']
 
+    def __init__(self,
+                 status, code, category=None, type=None, title=None, ip=None,
+                 body_length=0, ssl_verified=None, ssl_fingerprint=None):
         self.status = status
         self.code = code
         self.category = category
@@ -19,7 +16,7 @@ class Result(object):
 
     def __str__(self):
         return "<Result: " + (" ".join([
-            "{}=\"{}\"".format(k, getattr(self, k)) 
+            "{}=\"{}\"".format(k, getattr(self, k))
             for k in self.__slots__
-            #if k not in ('ssl_fingerprint',)
-            ])) + ">"
+            # if k not in ('ssl_fingerprint',)
+        ])) + ">"

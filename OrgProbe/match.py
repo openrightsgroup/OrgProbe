@@ -1,4 +1,3 @@
-
 import re
 import logging
 
@@ -6,8 +5,10 @@ from .result import Result
 
 CHARSET = 'utf8'
 
+
 class RulesMatcher(object):
     READ_SIZE = 8192
+
     def __init__(self, rules, blocktype, categorizor):
         self.rules = rules
         self.blocktype = blocktype or []
@@ -24,9 +25,9 @@ class RulesMatcher(object):
                 flags = re.M
 
             match = re.search(
-                    pattern, 
-                    value if isinstance(value, str) else value.decode(CHARSET), 
-                    flags)
+                pattern,
+                value if isinstance(value, str) else value.decode(CHARSET),
+                flags)
             if match is not None:
                 return True
             return False
@@ -48,19 +49,19 @@ class RulesMatcher(object):
                     category = self.categorizor.categorize(req.url)
                 return Result(
                     'blocked',
-                    req.history[-1].status_code 
-                        if hasattr(req, 'history') and len(req.history) > 0 
-                        else req.status_code,
+                    req.history[-1].status_code
+                    if hasattr(req, 'history') and len(req.history) > 0
+                    else req.status_code,
                     category,
                     self.blocktype[rulenum] if self.blocktype else None,
                     self.extract_title(body),
-                    body_length = len(body)
+                    body_length=len(body)
                 )
 
-        return Result('ok',  req.status_code, title=self.extract_title(body),
-                body_length=len(body))
+        return Result('ok', req.status_code, title=self.extract_title(body),
+                      body_length=len(body))
 
     def extract_title(self, content):
-        match = re.search(b'<title>(.*?)</title', content, re.S+re.I+re.M)
+        match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
         if match:
-            return match.group(1).decode('utf8','replace').strip()
+            return match.group(1).decode('utf8', 'replace').strip()

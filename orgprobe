@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+
 try:
     from ConfigParser import ConfigParser
 except ImportError:
@@ -12,7 +13,7 @@ from OrgProbe import Probe, APIRequest
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', '-c', default='config.ini',
-        help="path to config file")
+                    help="path to config file")
 parser.add_argument('--verbose', '-v', action='store_true', help="Verbose operation")
 parser.add_argument(dest='profile', nargs='?')
 args = parser.parse_args()
@@ -38,6 +39,7 @@ if config.has_section('api'):
                          getattr(APIRequest, prop.upper()))
         except Exception:
             pass
+
 
     apiconfig('https', config.getboolean)
     apiconfig('host', config.get)

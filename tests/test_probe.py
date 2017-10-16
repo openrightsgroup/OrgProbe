@@ -1,4 +1,3 @@
-
 from OrgProbe.probe import Probe
 from OrgProbe.match import RulesMatcher
 
@@ -13,10 +12,10 @@ class ProbeTests(unittest.TestCase):
     def setUp(self):
         self.probe = Probe({})
         self.probe.probe = {}
-        self.probe.rules_matcher = RulesMatcher([],[],[])
+        self.probe.rules_matcher = RulesMatcher([], [], [])
 
         # test that requests library is new enough
-        self.requests_new = map(int, requests.__version__.split('.')) > [2,12,0]
+        self.requests_new = map(int, requests.__version__.split('.')) > [2, 12, 0]
 
     def testRetrieveNotExistant(self):
 
@@ -33,7 +32,7 @@ class ProbeTests(unittest.TestCase):
         self.assertEquals(result.code, -1)
         if self.requests_new:
             self.assertEquals(result.ip, None)
-        
+
     def testNoHTTPS(self):
 
         result = self.probe.test_url('http://test99.dretzq.co.uk')
@@ -60,5 +59,3 @@ class ProbeTests(unittest.TestCase):
         self.assertEquals(result.code, -1)
         self.assertEquals(result.ssl_verified, None)
         self.assertEquals(result.ssl_fingerprint, None)
-
-
