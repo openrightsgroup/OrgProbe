@@ -21,6 +21,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Installer logs
 pip-log.txt
@@ -51,6 +52,9 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+# IDEs
+.idea
 
 config.ini
 *.swp
