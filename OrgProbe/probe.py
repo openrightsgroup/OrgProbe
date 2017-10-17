@@ -1,21 +1,19 @@
-import re
-import sys
-import json
-import time
-import logging
-import requests
-import hashlib
-import socket
 import contextlib
+import hashlib
+import json
+import logging
+import sys
 
-from .api import RegisterProbeRequest, PrepareProbeRequest, StatusIPRequest, \
-    ConfigRequest
-from .signing import RequestSigner
-from .category import Categorizor
-from .accounting import Accounting, OverLimitException
-from .match import RulesMatcher
+import requests
+
+from .accounting import Accounting
 from .amqpqueue import AMQPQueue
+from .api import StatusIPRequest, \
+    ConfigRequest
+from .category import Categorizor
+from .match import RulesMatcher
 from .result import Result
+from .signing import RequestSigner
 
 
 class SelfTestError(Exception):
@@ -280,19 +278,19 @@ class Probe(object):
 
     def run(self, args):
         if args.profile:
-            self.probename = args.profile
+            probename = args.profile
         else:
             try:
-                self.probename = [x for x in self.config.sections() if
-                                  x not in ('amqp', 'api', 'global')][0]
+                probename = [x for x in self.config.sections() if
+                             x not in ('amqp', 'api', 'global')][0]
             except IndexError:
                 self.LOGGER.error("No probe identity configuration found")
                 return 1
 
-        self.LOGGER.info("Using probe: %s", self.probename)
+        self.LOGGER.info("Using probe: %s", probename)
 
-        self.probe = dict([(x, self.config.get(self.probename, x))
-                           for x in self.config.options(self.probename)
+        self.probe = dict([(x, self.config.get(probename, x))
+                           for x in self.config.options(probename)
                            ])
 
         self.signer = RequestSigner(self.probe['secret'])
