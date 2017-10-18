@@ -1,28 +1,16 @@
-import unittest
-
 from OrgProbe.category import Categorizor
 
 
-class QueryStringCategorizorTests(unittest.TestCase):
-    def setUp(self):
-        pass
+def test_category():
+    assert 'violence' == Categorizor('querystring:category').categorize(
+        'http://isp.example.com/blocked?category=violence')
 
-    def testCategory(self):
-        categ = Categorizor('querystring:category')
-        self.assertEquals(
-            'violence',
-            categ.categorize('http://isp.example.com/blocked?'
-                             'category=violence'))
 
-    def testCategoryBase64(self):
-        categ = Categorizor('querystring:category:base64')
-        self.assertEquals(
-            'violence',
-            categ.categorize('http://isp.example.com/blocked?'
-                             'category=dmlvbGVuY2U='))
+def test_category_base64():
+    assert 'violence' == Categorizor('querystring:category:base64').categorize(
+        'http://isp.example.com/blocked?category=dmlvbGVuY2U=')
 
-    def testCategoryMissing(self):
-        categ = Categorizor('querystring:category')
-        self.assertIsNone(
-            categ.categorize(
-                'http://isp.example.com/blocked'))
+
+def test_category_missing():
+    assert None is Categorizor('querystring:category').categorize(
+        'http://isp.example.com/blocked')

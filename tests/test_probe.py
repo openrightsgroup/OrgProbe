@@ -1,7 +1,5 @@
 import logging
-import unittest
-
-import requests
+import pytest
 
 from OrgProbe.match import RulesMatcher
 from OrgProbe.probe import Probe
@@ -11,50 +9,51 @@ from tests.mock_server import tcp_server_that_times_out, http_server_that_return
 Probe.LOGGER.setLevel(logging.FATAL)
 
 
-class ProbeTests(unittest.TestCase):
-    def setUp(self):
-        self.probe = Probe({})
-        self.probe.probe = {}
-        self.probe.rules_matcher = RulesMatcher([], [], [])
-        # test that requests library is new enough
-        self.requests_new = map(int, requests.__version__.split('.')) > [2, 12, 0]
+@pytest.fixture
+def probe():
+    probe = Probe({})
+    probe.probe = {}
+    probe.rules_matcher = RulesMatcher([], [], [])
+    return probe
 
-    def testRetrieveNotExistent(self):
-        result = self.probe.test_url('http://does.not.exist.example.foobar')
-        self.assertEquals(result.status, 'dnserror')
-        self.assertEquals(result.code, -1)
-        if self.requests_new:
-            self.assertEquals(result.ip, None)
 
-    def testRetrieveInvalid(self):
-        result = self.probe.test_url('bob')
-        self.assertEquals(result.status, 'error')
-        self.assertEquals(result.code, -1)
-        if self.requests_new:
-            self.assertEquals(result.ip, None)
+def test_retrieve_not_existent(probe):
+    result = probe.test_url('http://does.not.exist.example.foobar')
+    assert result.status == 'dnserror'
+    assert result.code == -1
+    assert result.ip is None
 
-    def testNoHTTPS(self):
-        with http_server_that_returns_success() as port:
-            result = self.probe.test_url('http://localhost:{}'.format(port))
-            self.assertEquals(result.status, 'ok')
-            self.assertEquals(result.code, 200)
-            self.assertEquals(result.ssl_verified, None)
-            self.assertEquals(result.ssl_fingerprint, None)
-            if self.requests_new:
-                self.assertNotEquals(result.ip, None)
 
-    def testHTTPS(self):
-        with https_server_that_returns_success() as port:
-            result = self.probe.test_url('https://localhost:{}/'.format(port))
-            self.assertEquals(result.status, 'ok')
-            self.assertEquals(result.code, 200)
-            self.assertEquals(result.ssl_verified, False)
-            self.assertNotEquals(result.ssl_fingerprint, None)
+def test_retrieve_invalid(probe):
+    result = probe.test_url('bob')
+    assert result.status == 'error'
+    assert result.code == -1
+    assert result.ip is None
 
-    def testTimeout(self):
-        with tcp_server_that_times_out() as port:
-            result = self.probe.test_url('http://localhost:{}'.format(port))
-            self.assertEquals(result.status, 'timeout')
-            self.assertEquals(result.code, -1)
-            self.assertEquals(result.ssl_verified, None)
-            self.assertEquals(result.ssl_fingerprint, None)
+
+def test_no_https(probe):
+    with http_server_that_returns_success() as port:
+        result = probe.test_url('http://localhost:{}'.format(port))
+        assert result.status == 'ok'
+        assert result.code == 200
+        assert result.ssl_verified is None
+        assert result.ssl_fingerprint is None
+        assert result.ip is not None
+
+
+def test_https(probe):
+    with https_server_that_returns_success() as port:
+        result = probe.test_url('https://localhost:{}/'.format(port))
+        assert result.status == 'ok'
+        assert result.code == 200
+        assert not result.ssl_verified
+        assert result.ssl_fingerprint.startswith('55:71:61:C3')
+
+
+def test_timeout(probe):
+    with tcp_server_that_times_out() as port:
+        result = probe.test_url('http://localhost:{}'.format(port))
+        assert result.status == 'timeout'
+        assert result.code == -1
+        assert result.ssl_verified is None
+        assert result.ssl_fingerprint is None
