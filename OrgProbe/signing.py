@@ -9,6 +9,7 @@ if sys.version_info.major == 3:
 else:
     str_types = basestring
 
+
 class RequestSigner(object):
     def __init__(self, secret):
         self.secret = secret.encode('utf8')

@@ -4,6 +4,7 @@ import logging
 
 import pika
 
+
 class AMQPQueue(object):
     SIG_KEYS = ["probe_uuid", "url", "status", "date", "config"]
 
@@ -11,12 +12,12 @@ class AMQPQueue(object):
         creds = pika.PlainCredentials(
             opts['userid'],
             opts['passwd'],
-            )
+        )
         self.params = pika.ConnectionParameters(
             host=opts['host'],
             credentials=creds,
             heartbeat_interval=15,
-            )
+        )
         self.network = network
         logging.debug("Opening AMQP connection")
         self.signer = signer
@@ -31,14 +32,13 @@ class AMQPQueue(object):
     def start(self):
         self.conn = pika.SelectConnection(
             self.params,
-            on_open_callback = self.on_open,
+            on_open_callback=self.on_open,
             stop_ioloop_on_close=True
-            )
+        )
         self.conn.ioloop.start()
 
     def on_open(self, conn):
         self.conn.channel(self.on_channel_open)
-
 
     def on_channel_open(self, ch):
         self.ch = ch
@@ -46,7 +46,6 @@ class AMQPQueue(object):
             logging.debug("Setting QOS prefetch to %s", self.prefetch)
             self.ch.basic_qos(None, 0, int(self.prefetch), False)
         self.consumer_tag = self.ch.basic_consume(self.decode_msg, queue=self.queue_name)
-
 
     def decode_msg(self, channel, method, props, msg):
         # this is a wrapper callback that decodes the json data
@@ -78,5 +77,4 @@ class AMQPQueue(object):
         key = 'results.' + self.network + '.' + \
               urlhash if urlhash is not None else ''
         logging.debug("Sending result with key: %s", key)
-        self.ch.basic_publish( 'org.blocked', key, msg)
-
+        self.ch.basic_publish('org.blocked', key, msg)
