@@ -12,10 +12,18 @@ import logging
 from OrgProbe import Probe, APIRequest
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', '-c', default='config.ini',
-                    help="path to config file")
-parser.add_argument('--verbose', '-v', action='store_true', help="Verbose operation")
-parser.add_argument(dest='profile', nargs='?')
+parser.add_argument('--config',
+                    '-c',
+                    default='config.ini',
+                    help='path to config file')
+parser.add_argument('--verbose',
+                    '-v',
+                    action='store_true',
+                    help='Verbose operation')
+parser.add_argument(dest='profile',
+                    nargs='?',
+                    help='Probe profile name.  If unset then defaults to the first '
+                         'probe profile definition in the config file.')
 args = parser.parse_args()
 
 logging.basicConfig(
