@@ -1,5 +1,6 @@
-from OrgProbe.match import RulesMatcher
 from OrgProbe.category import Categorizor
+
+from OrgProbe.match import RulesMatcher
 
 
 class FakeRequest(object):

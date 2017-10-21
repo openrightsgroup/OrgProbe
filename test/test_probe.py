@@ -1,9 +1,10 @@
 import logging
-import pytest
 
-from OrgProbe.match import RulesMatcher
+import pytest
 from OrgProbe.probe import Probe
-from tests.mock_server import tcp_server_that_times_out, http_server_that_returns_success, \
+from OrgProbe.match import RulesMatcher
+
+from test.mock_server import tcp_server_that_times_out, http_server_that_returns_success, \
     https_server_that_returns_success
 
 Probe.LOGGER.setLevel(logging.FATAL)

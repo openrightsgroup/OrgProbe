@@ -16,15 +16,15 @@ Requires python 2.7.
 
 ## Run
 
-    python orgprobe -c path/to/config
+    python orgprobe -c config/example.config.ini
 
 An example config file is included.  You'll need to use the new-user signup and
  probe registration calls in the API to get credentials.  The registration 
  routine built into OrgProbe is alpha-quality at best.
 
 If you're running the Blocking-Middleware Vagrant VM, you can start OrgProbe 
-with the `config.vagrant.ini` config file, which will start a nice fast 
-HTTP-mode poll against the FakeISP set up in the VM database.
+ with the `vagrant.config.ini` config file, which will start a nice fast 
+ HTTP-mode poll against the FakeISP set up in the VM database.
 
 ## Unit Tests
 
@@ -51,7 +51,3 @@ For each incoming request in the AMQP queue:
 * Attempt to retrieve the URLs in the request.
 * Detect blocking type.
 * Report result back to the queue.
-
-## TODO 
-
-* Setup.py
