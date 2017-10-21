@@ -1,3 +1,5 @@
 pika>=0.10.0
 requests==2.12.0
 urllib3==1.21.1
+pyasn1
+redis
