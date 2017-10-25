@@ -45,19 +45,19 @@ class APIRequest(object):
             self.args['date'] = self.signer.timestamp()
         if self.SIG_KEYS and self.signer:
             self.args['signature'] = self.get_signature()
-        logging.info("Sending args: %s", self.args)
+        logging.debug("Sending args: %s", self.args)
         try:
             url = self.get_url()
-            logging.info("Opening ORG Api connection to: %s", url)
+            logging.debug("Opening ORG Api connection to: %s", url)
             if self.METHOD == 'GET':
                 rq = requests.get(url, params=self.args)
             else:
                 rq = requests.post(url, data=self.args)
-        except Exception, v:
+        except Exception as v:
             logging.error("API Error: %s", v)
             raise
 
-        logging.info("ORG Api Request Complete: %s", rq.status_code)
+        logging.debug("ORG Api Request Complete: %s", rq.status_code)
         try:
             if rq.status_code == 500:
                 raise APIError(rq.status_code)

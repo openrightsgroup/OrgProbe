@@ -1,21 +1,11 @@
+FROM python:2.7.14-alpine3.6
 
-FROM ubuntu:16.04
+COPY requirements.txt /requirements.txt
+RUN pip install -r requirements.txt
 
-RUN apt-get update 
-RUN apt-get -y install python-requests \
-    python-pyasn1 \
-    #python-ndg-httpsclient \
-    python-amqplib \
-    python-redis
-RUN apt-get clean
+COPY orgprobe /orgprobe
+COPY OrgProbe /OrgProbe
 
-RUN mkdir /usr/local/probe
+COPY config/docker.config.ini /config.ini
 
-COPY *.py /usr/local/probe/
-COPY docker/run-probe.sh /usr/local/probe/run-probe.sh
-COPY docker/config.ini.tmpl /usr/local/probe/config.ini.tmpl
-COPY docker/configure.py /usr/local/probe/configure.py
-
-RUN chmod a+x /usr/local/probe/run-probe.sh
-
-CMD /usr/local/probe/run-probe.sh
+CMD ["python", "/orgprobe", "-c", "/config.ini"]

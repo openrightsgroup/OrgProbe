@@ -1,9 +1,9 @@
-
 import logging
-import redis
 
 
-class OverLimitException(Exception): pass
+class OverLimitException(Exception):
+    pass
+
 
 class Counter(object):
     def __init__(self, r, network_name, name):
@@ -18,17 +18,18 @@ class Counter(object):
         return self.r.get(self.name)
 
     def reset(self):
-        self.r.set(self.name,0)
+        self.r.set(self.name, 0)
 
 
 class Accounting(object):
     def __init__(self, config, network, probe):
-        self.r = redis.StrictRedis(config.get('accounting','redis_server'))
+        import redis
+        self.r = redis.StrictRedis(config.get('accounting', 'redis_server'))
         self.config = config
         self.network = network
         self.probe = probe
 
-        self.r.sadd('networks',network)
+        self.r.sadd('networks', network)
 
         self.bytes = Counter(self.r, network, 'bytes_recv')
         self.requests = Counter(self.r, network, 'requests')
@@ -41,8 +42,6 @@ class Accounting(object):
                     raise OverLimitException
         except OverLimitException:
             raise
-        except Exception,v:
+        except Exception as v:
             logging.warn("Limit check exception: %s", repr(v))
             pass
-
-    
