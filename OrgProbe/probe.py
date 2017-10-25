@@ -126,7 +126,7 @@ class Probe(object):
         self.LOGGER.debug("Got rules: %s", rules)
 
     def setup_accounting(self):
-        if not self.config.has_section('accounting'):
+        if not self.config.get('accounting', 'redis_server', fallback=None):
             self.counters = None
             return
         self.counters = Accounting(self.config,
