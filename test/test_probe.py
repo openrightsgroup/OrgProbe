@@ -18,10 +18,12 @@ def probe():
     probe.rules_matcher = RulesMatcher([], [], [])
     return probe
 
+
 def test_config_no_accounting_section(probe):
     probe.config = configparser.ConfigParser()
     probe.setup_accounting()
     assert probe.counters is None
+
 
 def test_config_no_accounting_key(probe):
     probe.config = configparser.ConfigParser()
@@ -29,11 +31,13 @@ def test_config_no_accounting_key(probe):
     probe.setup_accounting()
     assert probe.counters is None
 
+
 def test_config_no_accounting_value(probe):
     probe.config = configparser.ConfigParser()
     probe.config.read_string(u"""[accounting]\nredis_server=""")
     probe.setup_accounting()
     assert probe.counters is None
+
 
 def test_config_with_accounting(probe, mocker):
     Accounting = mocker.patch('OrgProbe.probe.Accounting')
