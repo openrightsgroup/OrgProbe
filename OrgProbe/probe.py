@@ -186,25 +186,26 @@ class Probe(object):
 
         except requests.exceptions.ConnectionError as v:
             self.LOGGER.warn("Connection error: %s", v)
-            return Result('timeout', -1, final_url=v.request.url)
 
-        except Exception as v:
-            self.LOGGER.warn("Connection error: %s", v)
             try:
                 # look for dns failure in exception message
                 # requests lib turns nested exceptions into strings
                 if 'Name or service not known' in v.args[0].message:
                     self.LOGGER.info("DNS resolution failed(1)")
-                    return Result('dnserror', -1)
+                    return Result('dnserror', -1, final_url=v.request.url)
             except:
                 pass
             try:
                 # look for dns failure in exception message
                 if 'Name or service not known' in v.args[0][1].strerror:
                     self.LOGGER.info("DNS resolution failed(2)")
-                    return Result('dnserror', -1)
+                    return Result('dnserror', -1, final_url=v.request.url)
             except:
                 pass
+            return Result('timeout', -1, final_url=v.request.url)
+
+        except Exception as v:
+            self.LOGGER.warn("Connection error: %s", v)
             return Result('error', -1)
 
     def get_peer_address(self, req):

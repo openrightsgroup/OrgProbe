@@ -1,5 +1,6 @@
 class Result(object):
-    __slots__ = ['status', 'code', 'category', 'type', '_title', 'ip', 'body_length', 'ssl_verified', 'ssl_fingerprint','final_url']
+    __slots__ = ['status', 'code', 'category', 'type', '_title', 'ip', 'body_length', 'ssl_verified',
+                 'ssl_fingerprint', 'final_url']
 
     def __init__(self,
                  status, code, category=None, type=None, title=None, ip=None,
