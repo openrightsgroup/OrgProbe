@@ -171,6 +171,7 @@ class Probe(object):
                     result.ip = ip
                     result.ssl_fingerprint = ssl_fingerprint
                     result.ssl_verified = ssl_verified
+                    result.final_url = req.url
                     return result
                 except Exception as v:
                     self.LOGGER.error("Response test error: %s", v)
@@ -181,7 +182,11 @@ class Probe(object):
 
         except requests.exceptions.Timeout as v:
             self.LOGGER.warn("Connection timeout: %s", v)
-            return Result('timeout', -1)
+            return Result('timeout', -1, final_url=v.request.url)
+
+        except requests.exceptions.ConnectionError as v:
+            self.LOGGER.warn("Connection error: %s", v)
+            return Result('timeout', -1, final_url=v.request.url)
 
         except Exception as v:
             self.LOGGER.warn("Connection error: %s", v)
@@ -243,7 +248,8 @@ class Probe(object):
             'remote_ip': result.ip or '',
             'ssl_verified': None,
             'ssl_fingerprint': result.ssl_fingerprint,
-            'request_id': request_id
+            'request_id': request_id,
+            'final_url': result.final_url
         }
         if self.probe.get('verify_ssl', '').lower() == 'true':
             report.update({

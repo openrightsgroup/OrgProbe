@@ -1,9 +1,9 @@
 class Result(object):
-    __slots__ = ['status', 'code', 'category', 'type', '_title', 'ip', 'body_length', 'ssl_verified', 'ssl_fingerprint']
+    __slots__ = ['status', 'code', 'category', 'type', '_title', 'ip', 'body_length', 'ssl_verified', 'ssl_fingerprint','final_url']
 
     def __init__(self,
                  status, code, category=None, type=None, title=None, ip=None,
-                 body_length=0, ssl_verified=None, ssl_fingerprint=None):
+                 body_length=0, ssl_verified=None, ssl_fingerprint=None, final_url=None):
         self.status = status
         self.code = code
         self.category = category
@@ -13,6 +13,7 @@ class Result(object):
         self.body_length = body_length
         self.ssl_verified = ssl_verified
         self.ssl_fingerprint = ssl_fingerprint
+        self.final_url = final_url
 
     @property
     def title(self):
