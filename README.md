@@ -16,7 +16,7 @@ Requires python 2.7.
 
 ## Run
 
-    python orgprobe -c config/example.config.ini
+    python probe -c config/example.config.ini
 
 An example config file is included.  You'll need to use the new-user signup and
  probe registration calls in the API to get credentials.  The registration 
