@@ -1,96 +1,187 @@
-import logging
-import configparser
+import json
+from collections import namedtuple
 
 import pytest
-from OrgProbe.probe import Probe
-from OrgProbe.match import RulesMatcher
+from configparser import ConfigParser
+from mock import Mock
+from pytest import raises
 
-from test.mock_server import tcp_server_that_times_out, http_server_that_returns_success, \
-    https_server_that_returns_success
-
-Probe.LOGGER.setLevel(logging.FATAL)
+from OrgProbe import probe as ProbeModule
+from OrgProbe.amqpqueue import AMQPQueue
+from OrgProbe.middleware_api import MiddlewareAPI
+from OrgProbe.probe import Probe, SelfTestError
+from OrgProbe.result import Result
+from OrgProbe.url_tester import UrlTester
 
 
 @pytest.fixture
-def probe():
-    probe = Probe({})
-    probe.probe = {}
-    probe.rules_matcher = RulesMatcher([], [], [])
-    return probe
+def mock_probe_config():
+    config = ConfigParser()
+
+    config.add_section('global')
+    config.set('global', 'interval', '1')
+
+    config.add_section('api')
+    config.set('api', 'host', 'api.blocked.org.uk')
+    config.set('api', 'port', '443')
+    config.set('api', 'https', 'True')
+    config.set('api', 'version', '1.2')
+
+    config.add_section('amqp')
+    config.set('amqp', 'host', 'localhost')
+    config.set('amqp', 'port', '5672')
+    config.set('amqp', 'ssl', 'False')
+    config.set('amqp', 'userid', 'guest')
+    config.set('amqp', 'passwd', 'guest')
+    config.set('amqp', 'prefetch', '200')
+
+    config.add_section('probe')
+    config.set('probe', 'uuid', '01234567890123456788')
+    config.set('probe', 'secret', 'secret')
+    config.set('probe', 'queue', 'org')
+    config.set('probe', 'selftest', 'False')
+
+    return config
 
 
-def test_config_no_accounting_section(probe):
-    probe.config = configparser.ConfigParser()
-    probe.setup_accounting()
-    assert probe.counters is None
+@pytest.fixture
+def mock_amqp_queue(monkeypatch):
+    class MockAMQPQueueWrapper(object):
+        def __init__(self):
+            self.queue = Mock(AMQPQueue)
+            self.callback = None
+
+        def constructor(self,
+                        opts,
+                        network,
+                        queue_name,
+                        signer,
+                        callback,
+                        *args):
+            self.callback = callback
+            return self.queue
+
+    mock_amqp_queue_wrapper = MockAMQPQueueWrapper()
+    monkeypatch.setattr(ProbeModule, 'AMQPQueue', mock_amqp_queue_wrapper.constructor)
+    return mock_amqp_queue_wrapper
 
 
-def test_config_no_accounting_key(probe):
-    probe.config = configparser.ConfigParser()
-    probe.config.read_string(u"""[accounting]""")
-    probe.setup_accounting()
-    assert probe.counters is None
+@pytest.fixture
+def mock_middleware_api(monkeypatch):
+    config = """
+    {
+        "org-block-rules": "0.2.3",
+        "rules": [
+            {
+                "isp": "T-Mobile",
+                "match": [
+                    "re:body:TMobileBodyRule"
+                ]
+            },
+            {
+                "isp": "EE",
+                "match": [
+                    "re:url:EEBodyRule"
+                ]
+            }
+        ],
+        "self-test": {
+            "must-allow": [
+                "http://must.allow.fakedomain"
+            ],
+            "must-block": [
+                "http://must.block.fakedomain"
+            ]
+        },
+        "version": "2018012301"
+    }
+
+    """
+
+    mock_middleware_api = Mock(MiddlewareAPI)
+    mock_middleware_api.config.return_value = json.loads(config)
+    mock_middleware_api.status_ip.return_value = {"ip": "0.0.0.0", "isp": "EE"}
+
+    monkeypatch.setattr(ProbeModule, 'MiddlewareAPI', lambda *args: mock_middleware_api)
+    return mock_middleware_api
 
 
-def test_config_no_accounting_value(probe):
-    probe.config = configparser.ConfigParser()
-    probe.config.read_string(u"""[accounting]\nredis_server=""")
-    probe.setup_accounting()
-    assert probe.counters is None
+@pytest.fixture()
+def mock_url_tester(monkeypatch):
+    mock_url_tester = Mock(UrlTester)
+
+    def test_url(rules_matcher, url):
+        if "must.block.fakedomain" in url:
+            return Result('blocked', 200)
+        else:
+            return Result('ok', 200)
+
+    mock_url_tester.test_url.side_effect = test_url
+    monkeypatch.setattr(ProbeModule, 'UrlTester', lambda *args: mock_url_tester)
+
+    return mock_url_tester
 
 
-def test_config_with_accounting(probe, mocker):
-    Accounting = mocker.patch('OrgProbe.probe.Accounting')
+def test_successful_check(mock_amqp_queue,
+                          mock_middleware_api,
+                          mock_url_tester,
+                          mock_probe_config):
+    probe = Probe(mock_probe_config)
+    probe.run()
 
-    instance = Accounting.return_value
+    mock_amqp_queue.callback({
+        "url": "http://whatever",
+        "hash": '',
+        "request_id": "000"
+    })
 
-    probe.config = configparser.ConfigParser()
-    probe.config.read_string(u"""[accounting]\nredis_server=foo""")
-    probe.isp = "ExampleISP"
+    report = mock_amqp_queue.queue.send.call_args[0]
+    assert {
+               'status': 'ok',
+               'ssl_verified': None,
+               'ip_network': '0.0.0.0',
 
-    probe.setup_accounting()
-
-    Accounting.assert_called_with(probe.config, "exampleisp", probe.probe)
-    assert probe.counters is instance
-
-
-def test_retrieve_not_existent(probe):
-    result = probe.test_url('http://does.not.exist.example.foobar')
-    assert result.status == 'dnserror'
-    assert result.code == -1
-    assert result.ip is None
-
-
-def test_retrieve_invalid(probe):
-    result = probe.test_url('bob')
-    assert result.status == 'error'
-    assert result.code == -1
-    assert result.ip is None
-
-
-def test_no_https(probe):
-    with http_server_that_returns_success() as port:
-        result = probe.test_url('http://localhost:{}'.format(port))
-        assert result.status == 'ok'
-        assert result.code == 200
-        assert result.ssl_verified is None
-        assert result.ssl_fingerprint is None
-        assert result.ip is not None
+               'probe_uuid': u'01234567890123456788',
+               'blocktype': '',
+               'network_name': 'EE',
+               'category': '',
+               'title': 'Google',
+               'url': 'http://www.google.com',
+               'ssl_fingerprint': None,
+               'http_status': 200,
+               'request_id': '000',
+           } <= report
 
 
-def test_https(probe):
-    with https_server_that_returns_success() as port:
-        result = probe.test_url('https://localhost:{}/'.format(port))
-        assert result.status == 'ok'
-        assert result.code == 200
-        assert not result.ssl_verified
-        assert result.ssl_fingerprint.startswith('55:71:61:C3')
+def test_selftest_successful(mock_amqp_queue,
+                             mock_middleware_api,
+                             mock_url_tester,
+                             mock_probe_config):
+    mock_probe_config.set('probe', 'selftest', 'True')
+    probe = Probe(mock_probe_config)
+    probe.run()
 
 
-def test_timeout(probe):
-    with tcp_server_that_times_out() as port:
-        result = probe.test_url('http://localhost:{}'.format(port))
-        assert result.status == 'timeout'
-        assert result.code == -1
-        assert result.ssl_verified is None
-        assert result.ssl_fingerprint is None
+def test_selftest_blocked_site_allowed(mock_amqp_queue,
+                                       mock_middleware_api,
+                                       mock_url_tester,
+                                       mock_probe_config):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('ok', 200)
+
+    mock_probe_config.set('probe', 'selftest', 'True')
+    probe = Probe(mock_probe_config)
+    with raises(SelfTestError):
+        probe.run()
+
+
+def test_selftest_allowed_site_blocked(mock_amqp_queue,
+                                       mock_middleware_api,
+                                       mock_url_tester,
+                                       mock_probe_config):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('blocked', 200)
+    mock_probe_config.set('probe', 'selftest', 'True')
+    probe = Probe(mock_probe_config)
+    with raises(SelfTestError):
+        probe.run()

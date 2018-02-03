@@ -27,6 +27,10 @@ class AMQPQueue(object):
         self.prefetch = int(opts['prefetch']) if 'prefetch' in opts else None
         self.test_method = test_method
 
+        self.conn = None
+        self.ch = None
+        self.consumer_tag = None
+
     def start(self):
         self.conn = pika.SelectConnection(
             self.params,
