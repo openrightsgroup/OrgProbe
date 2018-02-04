@@ -6,6 +6,11 @@ from contextlib import contextmanager
 import thread
 
 
+CERTIFICATE_FINGERPRINT = \
+    "1C:8B:97:C0:5F:4A:EF:1E:6B:88:57:BF:CC:2F:96:E5:" \
+    "77:DA:9C:E3:14:11:9F:54:9F:BE:45:7B:D8:51:B4:95"
+
+
 class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     # Probe requires connections to be kept alive (eg. usage of connection.sock),
     # this is easiest to do via HTTP/1.1.
@@ -27,10 +32,10 @@ class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 def https_server_that_returns_success():
     keyfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                            'ssl_certs',
-                           'ssl.key')
+                           'localhost.key')
     certfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                             'ssl_certs',
-                            'ssl.crt')
+                            'localhost.crt')
 
     server = BaseHTTPServer.HTTPServer(("localhost", 0), HttpHandler)
     server.socket = ssl.wrap_socket(server.socket,
