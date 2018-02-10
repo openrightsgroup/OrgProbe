@@ -137,20 +137,20 @@ def test_successful_check(mock_amqp_queue,
 
     report = mock_amqp_queue.queue.send.call_args[0]
     assert {
-               'status': 'ok',
-               'ssl_verified': None,
-               'ip_network': '0.0.0.0',
+        'status': 'ok',
+        'ssl_verified': None,
+        'ip_network': '0.0.0.0',
 
-               'probe_uuid': u'01234567890123456788',
-               'blocktype': '',
-               'network_name': 'EE',
-               'category': '',
-               'title': 'Google',
-               'url': 'http://www.google.com',
-               'ssl_fingerprint': None,
-               'http_status': 200,
-               'request_id': '000',
-           } <= report
+        'probe_uuid': u'01234567890123456788',
+        'blocktype': '',
+        'network_name': 'EE',
+        'category': '',
+        'title': 'Google',
+        'url': 'http://www.google.com',
+        'ssl_fingerprint': None,
+        'http_status': 200,
+        'request_id': '000',
+    } <= report
 
 
 def test_selftest_successful(mock_amqp_queue,
