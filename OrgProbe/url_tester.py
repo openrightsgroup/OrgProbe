@@ -15,7 +15,9 @@ DEFAULT_USER_AGENT = 'OrgProbe/2.0.0 (+http://www.blocked.org.uk)'
 
 class UrlTester:
 
-    def __init__(self, probe_config):
+    def __init__(self, probe_config, counters, rules_matcher):
+        self.counters = counters
+        self.rules_matcher = rules_matcher
         self.signer = RequestSigner(probe_config['secret'])
         self.headers = {
             'User-Agent': probe_config.get('useragent', DEFAULT_USER_AGENT),
@@ -28,8 +30,21 @@ class UrlTester:
 
         self.timeout = int(probe_config.get('timeout', 5))
 
-    def test_url(self, rules_matcher, url):
+    def test_url(self, url):
         logger.info("Testing URL: %s", url)
+
+        if self.counters:
+            self.counters.requests.add(1)
+
+        result = self._test_url_no_accounting(url)
+
+        if self.counters and result.body_length is not None:
+            self.counters.check()
+            self.counters.bytes.add(result.body_length)
+
+        return result
+
+    def _test_url_no_accounting(self, url):
         try:
             with contextlib.closing(requests.get(
                     url,
@@ -49,7 +64,7 @@ class UrlTester:
                         ssl_verified = req.raw.connection.is_verified
                         ssl_fingerprint = self.get_ssl_fingerprint(req)
 
-                    result = rules_matcher.test_response(req)
+                    result = self.rules_matcher.test_response(req)
                     result.ip = ip
                     result.ssl_fingerprint = ssl_fingerprint
                     result.ssl_verified = ssl_verified

@@ -7,7 +7,7 @@ import sys
 import configparser
 import logging
 
-from OrgProbe import Probe
+from OrgProbe import run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',
@@ -41,7 +41,4 @@ loaded = config.read(args.config)
 
 logging.info("Loaded %s config files from %s", loaded, args.config)
 
-probe = Probe(config)
-
-logging.debug("Entering run mode")
-sys.exit(probe.run(args.profile))
+sys.exit(run(config, args.profile))

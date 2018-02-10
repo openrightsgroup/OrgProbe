@@ -8,24 +8,31 @@ from test.mock_server import tcp_server_that_times_out, http_server_that_returns
     https_server_that_returns_success, CERTIFICATE_FINGERPRINT
 
 
-def build_url_tester(verify_ssl=False):
-    url_tester = UrlTester({
-        "secret": "secret",
-        "verify_ssl": "false"
-    })
+@pytest.fixture
+def url_tester(mock_rules_matcher):
+    def build(verify_ssl=False):
+        url_tester = UrlTester(
+            probe_config={
+                "secret": "secret",
+                "verify_ssl": "false"
+            },
+            counters=None,
+            rules_matcher=mock_rules_matcher
+        )
 
-    if verify_ssl:
-        # This is a pretty nasty hack - only works because the
-        # url_tester passes self.verify_ssl to requests.get, so
-        # we can cheat and pass our cert rather than true.
-        url_tester.verify_ssl = path.join(path.dirname(__file__),
-                                          "ssl_certs/localhost.crt")
+        if verify_ssl:
+            # This is a pretty nasty hack - only works because the
+            # url_tester passes self.verify_ssl to requests.get, so
+            # we can cheat and pass our cert rather than true.
+            url_tester.verify_ssl = path.join(path.dirname(__file__),
+                                              "ssl_certs/localhost.crt")
 
-    return url_tester
+        return url_tester
+    return build
 
 
 @pytest.fixture
-def rules_matcher():
+def mock_rules_matcher():
     class MockRulesMatcher(object):
         def test_response(self, response):
             return Result('ok', 200, title="title", body_length=1234)
@@ -33,23 +40,23 @@ def rules_matcher():
     return MockRulesMatcher()
 
 
-def test_retrieve_not_existent(rules_matcher):
-    result = build_url_tester().test_url(rules_matcher, 'http://does.not.exist.example.local')
+def test_retrieve_not_existent(url_tester):
+    result = url_tester().test_url('http://does.not.exist.example.local')
     assert result.status == 'dnserror'
     assert result.code == -1
     assert result.ip is None
 
 
-def test_retrieve_invalid(rules_matcher):
-    result = build_url_tester().test_url(rules_matcher, 'bob')
+def test_retrieve_invalid(url_tester):
+    result = url_tester().test_url('bob')
     assert result.status == 'error'
     assert result.code == -1
     assert result.ip is None
 
 
-def test_no_https(rules_matcher):
+def test_no_https(url_tester):
     with http_server_that_returns_success() as port:
-        result = build_url_tester().test_url(rules_matcher, 'http://localhost:{}'.format(port))
+        result = url_tester().test_url('http://localhost:{}'.format(port))
         assert result.status == 'ok'
         assert result.code == 200
         assert result.ssl_verified is None
@@ -57,28 +64,30 @@ def test_no_https(rules_matcher):
         assert result.ip is not None
 
 
-def test_https(rules_matcher):
+@pytest.mark.filterwarnings('ignore:Unverified HTTPS request is being made')
+def test_https(url_tester):
     with https_server_that_returns_success() as port:
-        result = build_url_tester().test_url(rules_matcher, 'https://localhost:{}/'.format(port))
+        result = url_tester().test_url('https://localhost:{}/'.format(port))
         assert result.status == 'ok'
         assert result.code == 200
         assert not result.ssl_verified
         assert result.ssl_fingerprint == CERTIFICATE_FINGERPRINT
 
 
-def test_https_with_verify_ssl(rules_matcher):
+@pytest.mark.filterwarnings('ignore:Certificate for localhost has no `subjectAltName`')
+def test_https_with_verify_ssl(url_tester):
     with https_server_that_returns_success() as port:
-        result = build_url_tester(verify_ssl=True).test_url(
-            rules_matcher, 'https://localhost:{}/'.format(port))
+        result = url_tester(verify_ssl=True).test_url(
+            'https://localhost:{}/'.format(port))
         assert result.status == 'ok'
         assert result.code == 200
         assert result.ssl_verified
         assert result.ssl_fingerprint == CERTIFICATE_FINGERPRINT
 
 
-def test_timeout(rules_matcher):
+def test_timeout(url_tester):
     with tcp_server_that_times_out() as port:
-        result = build_url_tester().test_url(rules_matcher, 'http://localhost:{}'.format(port))
+        result = url_tester().test_url('http://localhost:{}'.format(port))
         assert result.status == 'timeout'
         assert result.code == -1
         assert result.ssl_verified is None
