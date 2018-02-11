@@ -104,12 +104,12 @@ def test_selftest_successful(mock_amqp_queue, probe):
     })
 
     report = mock_amqp_queue.send_selftest_report.call_args[0][0]
-    assert not report["is_failed_selftest"]
+    assert report["result"] == "filter_enabled"
 
 
-def test_selftest_blocked_site_allowed(mock_amqp_queue,
-                                       probe,
-                                       mock_url_tester):
+def test_selftest_must_block_site_allowed(mock_amqp_queue,
+                                          probe,
+                                          mock_url_tester):
     mock_url_tester.test_url.side_effect = None
     mock_url_tester.test_url.return_value = Result('ok', 200)
 
@@ -119,7 +119,22 @@ def test_selftest_blocked_site_allowed(mock_amqp_queue,
     })
 
     report = mock_amqp_queue.send_selftest_report.call_args[0][0]
-    assert report["is_failed_selftest"]
+    assert report["result"] == "filter_disabled"
+
+
+def test_selftest_must_allow_site_blocked(mock_amqp_queue,
+                                          probe,
+                                          mock_url_tester):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('blocked', 200)
+
+    probe().run_test({
+        "action": "run_selftest",
+        "request_id": "001"
+    })
+
+    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
+    assert report["result"] == "error"
 
 
 def test_initial_selftest_successful(probe,
@@ -129,9 +144,9 @@ def test_initial_selftest_successful(probe,
     probe().run_startup_selftest()
 
 
-def test_initial_selftest_blocked_site_allowed(probe,
-                                               mock_url_tester,
-                                               mock_probe_config):
+def test_initial_selftest_must_block_site_allowed(probe,
+                                                  mock_url_tester,
+                                                  mock_probe_config):
     mock_url_tester.test_url.side_effect = None
     mock_url_tester.test_url.return_value = Result('ok', 200)
     mock_probe_config['selftest'] = 'True'
@@ -140,9 +155,9 @@ def test_initial_selftest_blocked_site_allowed(probe,
         probe().run_startup_selftest()
 
 
-def test_initial_selftest_allowed_site_blocked(probe,
-                                               mock_url_tester,
-                                               mock_probe_config):
+def test_initial_selftest_must_allow_site_blocked(probe,
+                                                  mock_url_tester,
+                                                  mock_probe_config):
     mock_url_tester.test_url.side_effect = None
     mock_url_tester.test_url.return_value = Result('blocked', 200)
     mock_probe_config['selftest'] = 'True'

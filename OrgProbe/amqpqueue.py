@@ -88,7 +88,7 @@ class AMQPQueue(object):
 
         report['signature'] = self.signer.get_signature(
             args=report,
-            keys=["probe_uuid", "is_failed_selftest", "date"])
+            keys=["probe_uuid", "result", "date"])
 
         self.send(routing_key, report)
 

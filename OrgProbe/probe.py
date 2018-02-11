@@ -86,31 +86,34 @@ class Probe(object):
     def _run_selftest(self, request_id):
         logger.debug("run_selftest")
 
-        results = {
+        detailed_results = {
             "must-allow": [(url, self.url_tester.test_url(url))
                            for url in self.apiconfig['self-test']['must-allow']],
             "must-block": [(url, self.url_tester.test_url(url))
                            for url in self.apiconfig['self-test']['must-block']]
         }
-        is_failed_selftest = (any(result[1].status != 'ok' for result in results["must-allow"]) or
-                              any(result[1].status != 'blocked' for result in results["must-block"]))
 
-        if is_failed_selftest:
-            logger.warn("Failed self-test %s", results)
+        if any(result[1].status != 'ok' for result in detailed_results["must-allow"]):
+            logger.error("Self-test failed - couldn't access some sites in 'must-allow' list")
+            result = "error"
+        elif any(result[1].status != 'blocked' for result in detailed_results["must-block"]):
+            logger.info("Self-test showed filter disabled")
+            result = "filter_disabled"
         else:
-            logger.info("Self-test successful")
+            logger.info("Self-test showed filter enabled")
+            result = "filter_enabled"
 
         self.queue.send_selftest_report(
-            self._build_selftest_report(request_id, is_failed_selftest, results))
+            self._build_selftest_report(request_id, result, detailed_results))
 
-    def _build_selftest_report(self, request_id, is_failed_selftest, results):
-        must_allow = [self._build_report(request_id, result, url)
-                      for url, result in results["must-allow"]]
-        must_block = [self._build_report(request_id, result, url)
-                      for url, result in results["must-block"]]
+    def _build_selftest_report(self, request_id, result, detailed_results):
+        must_allow = [self._build_report(request_id, detail, url)
+                      for url, detail in detailed_results["must-allow"]]
+        must_block = [self._build_report(request_id, detail, url)
+                      for url, detail in detailed_results["must-block"]]
         return {
             "request_id": request_id,
-            "is_failed_selftest": is_failed_selftest,
+            "result": result,
             "probe_uuid": self.probe_config['uuid'],
             "details": {
                 "must-allow": must_allow,
