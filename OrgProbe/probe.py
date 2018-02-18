@@ -115,6 +115,7 @@ class Probe(object):
             "request_id": request_id,
             "result": result,
             "probe_uuid": self.probe_config['uuid'],
+            "network_name": self.isp,
             "details": {
                 "must-allow": must_allow,
                 "must-block": must_block
