@@ -4,10 +4,10 @@ import pytest
 from mock import Mock
 from pytest import raises
 
-from OrgProbe.amqpqueue import AMQPQueue
-from OrgProbe.probe import Probe, SelfTestError
-from OrgProbe.result import Result
-from OrgProbe.url_tester import UrlTester
+from orgprobe.amqpqueue import AMQPQueue
+from orgprobe.probe import Probe, SelfTestError
+from orgprobe.result import Result
+from orgprobe.url_tester import UrlTester
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-from OrgProbe.category import Categorizor
+from orgprobe.category import Categorizor
 
 
 def test_category():

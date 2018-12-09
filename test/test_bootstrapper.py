@@ -1,6 +1,6 @@
 import configparser
 
-from OrgProbe.bootstrapper import setup_accounting
+from orgprobe.bootstrapper import setup_accounting
 
 
 def test_config_no_accounting_section():
@@ -21,7 +21,7 @@ def test_config_no_accounting_value():
 
 
 def test_config_with_accounting(mocker):
-    Accounting = mocker.patch('OrgProbe.bootstrapper.Accounting')
+    Accounting = mocker.patch('orgprobe.bootstrapper.Accounting')
 
     instance = Accounting.return_value
 

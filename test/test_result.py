@@ -1,5 +1,5 @@
 # coding: utf-8
-from OrgProbe.result import Result
+from orgprobe.result import Result
 
 import logging
 
