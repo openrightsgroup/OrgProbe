@@ -9,7 +9,7 @@ setup(name='OrgProbe',
       author_email='blocked@openrightsgroup.org',
       url='https://github.com/openrightsgroup/OrgProbe',
       packages=['OrgProbe'],
-      scripts=['orgprobe'],
+      scripts=['orgprobe-daemon'],
       requires=[
           'pika(>=0.10.0)',
           'requests(==2.12.0)',
