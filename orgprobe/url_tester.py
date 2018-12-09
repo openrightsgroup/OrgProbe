@@ -41,7 +41,8 @@ class UrlTester:
         if self.counters and result.body_length is not None:
             self.counters.check()
             self.counters.bytes.add(result.body_length)
-
+        
+        logger.info("Result for: %s : %s", url, result.status)
         return result
 
     def _test_url_no_accounting(self, url):
