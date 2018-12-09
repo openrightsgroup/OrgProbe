@@ -13,13 +13,15 @@ class FakeRequest(object):
         self.iter_content = lambda x: ["test content <title>foo</title>"].__iter__()
 
 
-matcher = RulesMatcher([
+matcher = RulesMatcher(
+    [
         "re:url:^http://www\\.talktalk\\.co\\.uk/" +
         "notice/parental-controls\\?accessurl",
         "re:url:^http://www\\.siteblocked\\.org/piratebay\\.html\\?"
     ],
     ['PARENTAL', 'COPYRIGHT'],
-    Categorizor('querystring:urlclassname:base64'))
+    Categorizor('querystring:urlclassname:base64')
+)
 
 
 def test_match():

@@ -1,19 +1,6 @@
-import contextlib
-import hashlib
-import json
 import logging
-import sys
 
-import requests
-
-from .accounting import Accounting
-from .amqpqueue import AMQPQueue
-from .api import StatusIPRequest, \
-    ConfigRequest
-from .category import Categorizor
-from .match import RulesMatcher
-from .result import Result
-from .signing import RequestSigner
+logger = logging.getLogger("probe")
 
 
 class SelfTestError(Exception):
@@ -21,227 +8,65 @@ class SelfTestError(Exception):
 
 
 class Probe(object):
-    DEFAULT_USERAGENT = 'OrgProbe/2.0.0 (+http://www.blocked.org.uk)'
-    LOGGER = logging.getLogger("probe")
+    def __init__(self,
+                 url_tester,
+                 queue,
+                 isp,
+                 ip,
+                 probe_config,
+                 apiconfig):
+        self.url_tester = url_tester
+        self.queue = queue
+        self.isp = isp
+        self.ip = ip
+        self.probe_config = probe_config
+        self.apiconfig = apiconfig
 
-    def __init__(self, config):
-        self.config = config
+    def run_test(self, data):
+        logger.debug("run_test %s", data)
 
-        # initialize configuration
-
-        # set up in .run()
-        self.probe = None
-        self.signer = None
-        self.headers = {}
-        self.verify_ssl = False
-
-        # set up in .configure()
-
-        self.apiconfig = None
-        self.isp = None
-        self.ip = None
-
-        pass
-
-    def configure(self):
-        self.get_api_config()
-        self.get_ip_status()
-        self.setup_accounting()
-        self.run_selftest()
-        self.setup_queue()
-
-    def get_api_config(self):
-        if self.probe.get('api_config_file'):
-            with open(self.probe['api_config_file']) as fp:
-                self.apiconfig = json.load(fp)
-                self.LOGGER.info("Loaded config: %s from %s",
-                                 self.apiconfig['version'],
-                                 self.probe['api_config_file'])
-
-            return
-        req = ConfigRequest(None, self.probe.get('config_version', 'latest'))
-        code, data = req.execute()
-        if code == 200:
-            self.LOGGER.info("Loaded config: %s", data['version'])
-            self.apiconfig = data
-            self.LOGGER.debug("Got config: %s", data)
-        elif code == 304:
-            pass
+        action = data.get('action', 'run_test')
+        if action == "run_test":
+            if 'url' in data:
+                self._test_and_report_url(data['url'], data['hash'], data.get('request_id'))
+            elif 'urls' in data:
+                for url in data['urls']:
+                    self._test_and_report_url(url['url'], data['hash'], request_id=data.get('request_id'))
+        elif action == "run_selftest":
+            self._run_selftest(data['request_id'])
         else:
-            self.LOGGER.error("Error downloading config: %s, %s", code,
-                              data['error'])
+            logger.warn("Dropping message with unknown action: %s", action)
 
-    def get_ip_status(self):
-        try:
-            args = (self.probe['public_ip'],)
-        except KeyError:
-            args = []
-        req = StatusIPRequest(self.signer, *args,
-                              probe_uuid=self.probe['uuid'])
-        code, data = req.execute()
-        self.LOGGER.info("Status: %s; Network=%s", code, data)
-        if 'network' in self.probe:
-            self.isp = self.probe['network']
-            self.LOGGER.warn("Overriding network to: %s", self.isp)
+    def run_startup_selftest(self):
+        logger.debug("run_startup_selftest")
+
+        if self.probe_config.get('selftest', 'true').lower() != 'true':
+            logger.debug("selftest on startup disabled")
         else:
-            self.isp = data['isp']
+            for url in self.apiconfig['self-test']['must-allow']:
+                if self.url_tester.test_url(url).status != 'ok':
+                    raise SelfTestError
+            for url in self.apiconfig['self-test']['must-block']:
+                if self.url_tester.test_url(url).status != 'blocked':
+                    raise SelfTestError
 
-        self.ip = data['ip']
+    def _test_and_report_url(self, url, urlhash=None, request_id=None):
+        logger.debug("test_and_report_url %s, %s, %s", url, urlhash, request_id)
+        result = self.url_tester.test_url(url)
 
-        for rule in self.apiconfig['rules']:
-            if rule['isp'] == self.isp:
-                rules = rule['match']
-                if 'category' in rule:
-                    self.LOGGER.debug("Creating Categorizor with rule: %s",
-                                      rule['category'])
-                    categorizor = Categorizor(rule['category'])
-                else:
-                    categorizor = None
+        logger.debug("Result: %s; %s", request_id, result)
+        report = self._build_report(request_id, result, url)
 
-                if 'blocktype' in rule:
-                    self.LOGGER.debug("Adding blocktype array: %s",
-                                      rule['blocktype'])
-                    blocktype = rule['blocktype']
-                else:
-                    blocktype = None
+        self.queue.send_report(report, urlhash)
 
-                self.rules_matcher = RulesMatcher(
-                    rules,
-                    blocktype,
-                    categorizor,
-                )
-                break
-        else:
-            self.LOGGER.error("No rules found for ISP: %s", self.isp)
-            if self.probe.get('skip_rules', 'false').lower() == 'true':
-                rules = []
-                self.rules_matcher = RulesMatcher(
-                    rules,
-                    [],
-                    None
-                )
-            else:
-                sys.exit(1)
-
-        self.LOGGER.debug("Got rules: %s", rules)
-
-    def setup_accounting(self):
-        if not self.config.get('accounting', 'redis_server', fallback=None):
-            self.counters = None
-            return
-        self.counters = Accounting(self.config,
-                                   self.isp.lower().replace(' ', '_'), self.probe)
-        self.counters.check()
-
-    def setup_queue(self):
-        opts = dict(self.config.items('amqp'))
-        self.LOGGER.debug("Setting up AMQP with options: %s", opts)
-        lifetime = int(self.probe['lifetime']) if 'lifetime' in \
-                                                  self.probe else None
-        self.queue = AMQPQueue(opts,
-                               self.isp.lower().replace(' ', '_'),
-                               self.probe.get('queue', 'org'),
-                               self.signer,
-                               self.run_test,
-                               lifetime,
-                               )
-
-    def test_url(self, url):
-        self.LOGGER.info("Testing URL: %s", url)
-        try:
-            with contextlib.closing(requests.get(
-                    url,
-                    headers=self.headers,
-                    timeout=int(self.probe.get('timeout', 5)),
-                    verify=self.verify_ssl,
-                    stream=True
-            )) as req:
-                try:
-                    ssl_verified = None
-                    ssl_fingerprint = None
-                    ip = self.get_peer_address(req)
-
-                    self.LOGGER.debug("Got IP: %s", ip)
-
-                    if req.url.startswith('https'):
-                        ssl_verified = req.raw.connection.is_verified
-                        ssl_fingerprint = self.get_ssl_fingerprint(req)
-
-                    result = self.rules_matcher.test_response(req)
-                    result.ip = ip
-                    result.ssl_fingerprint = ssl_fingerprint
-                    result.ssl_verified = ssl_verified
-                    result.final_url = req.url
-                    return result
-                except Exception as v:
-                    self.LOGGER.error("Response test error: %s", v)
-                    raise
-        except requests.exceptions.SSLError as v:
-            self.LOGGER.warn("SSL Error: %s", v)
-            return Result('sslerror', -1)
-
-        except requests.exceptions.Timeout as v:
-            self.LOGGER.warn("Connection timeout: %s", v)
-            return Result('timeout', -1, final_url=v.request.url)
-
-        except requests.exceptions.ConnectionError as v:
-            self.LOGGER.warn("Connection error: %s", v)
-
-            try:
-                # look for dns failure in exception message
-                # requests lib turns nested exceptions into strings
-                if 'Name or service not known' in v.args[0].message:
-                    self.LOGGER.info("DNS resolution failed(1)")
-                    return Result('dnserror', -1, final_url=v.request.url)
-            except:
-                pass
-            try:
-                # look for dns failure in exception message
-                if 'Name or service not known' in v.args[0][1].strerror:
-                    self.LOGGER.info("DNS resolution failed(2)")
-                    return Result('dnserror', -1, final_url=v.request.url)
-            except:
-                pass
-            return Result('timeout', -1, final_url=v.request.url)
-
-        except Exception as v:
-            self.LOGGER.warn("Connection error: %s", v)
-            return Result('error', -1)
-
-    def get_peer_address(self, req):
-        try:
-            # Non-SSL
-            return req.raw.connection.sock.getpeername()[0]
-        except Exception as exc:
-            self.LOGGER.debug("IP trace error: %s", exc)
-        try:
-            # SSL version
-            return req.raw.connection.sock.socket.getpeername()[0]
-        except Exception as exc:
-            self.LOGGER.debug("IP trace error: %s", exc)
-
-    def get_ssl_fingerprint(self, req):
-        try:
-            hexstr = hashlib.sha256(req.raw.connection.sock.getpeercert(True)).hexdigest()
-            ssl_fingerprint = ":".join([hexstr[i:i + 2].upper() for i in range(0, len(hexstr), 2)])
-            self.LOGGER.info("Got fingerprint: %s", ssl_fingerprint)
-            return ssl_fingerprint
-        except Exception as exc:
-            self.LOGGER.debug("SSL fingerprint error: %s", exc)
-            raise
-
-    def test_and_report_url(self, url, urlhash=None, request_id=None):
-        result = self.test_url(url)
-
-        self.LOGGER.info("Result: %s; %s", request_id, result)
-
+    def _build_report(self, request_id, result, url):
         report = {
             'network_name': self.isp,
             'ip_network': self.ip,
             'url': url,
             'http_status': result.code,
             'status': result.status,
-            'probe_uuid': self.probe['uuid'],
+            'probe_uuid': self.probe_config['uuid'],
             'config': self.apiconfig['version'],
             'category': result.category or '',
             'blocktype': result.type or '',
@@ -252,61 +77,47 @@ class Probe(object):
             'request_id': request_id,
             'final_url': result.final_url
         }
-        if self.probe.get('verify_ssl', '').lower() == 'true':
+        if self.probe_config.get('verify_ssl', '').lower() == 'true':
             report.update({
                 'ssl_verified': result.ssl_verified,
             })
+        return report
 
-        self.queue.send(report, urlhash)
-        if self.counters:
-            self.counters.check()
-            self.counters.bytes.add(result.body_length)
+    def _run_selftest(self, request_id):
+        logger.debug("run_selftest")
 
-    def run_selftest(self):
-        if self.probe.get('selftest', 'true').lower() != 'true':
-            return
-
-        for url in self.apiconfig['self-test']['must-allow']:
-            if self.test_url(url).status != 'ok':
-                raise SelfTestError
-        for url in self.apiconfig['self-test']['must-block']:
-            if self.test_url(url).status != 'blocked':
-                raise SelfTestError
-
-    def run_test(self, data):
-        if self.counters:
-            self.counters.requests.add(1)
-
-        if 'url' in data:
-            self.test_and_report_url(data['url'], data['hash'], data.get('request_id'))
-        elif 'urls' in data:
-            for url in data['urls']:
-                self.test_and_report_url(url['url'], data['hash'], request_id=data.get('request_id'))
-
-    def run(self, args):
-        if args.profile:
-            probename = args.profile
-        else:
-            try:
-                probename = [x for x in self.config.sections() if
-                             x not in ('amqp', 'api', 'global')][0]
-            except IndexError:
-                self.LOGGER.error("No probe identity configuration found")
-                return 1
-
-        self.LOGGER.info("Using probe: %s", probename)
-
-        self.probe = dict([(x, self.config.get(probename, x))
-                           for x in self.config.options(probename)
-                           ])
-
-        self.signer = RequestSigner(self.probe['secret'])
-        self.headers = {
-            'User-Agent': self.probe.get('useragent', self.DEFAULT_USERAGENT),
+        detailed_results = {
+            "must-allow": [(url, self.url_tester.test_url(url))
+                           for url in self.apiconfig['self-test']['must-allow']],
+            "must-block": [(url, self.url_tester.test_url(url))
+                           for url in self.apiconfig['self-test']['must-block']]
         }
 
-        if 'verify_ssl' in self.probe:
-            self.verify_ssl = (self.probe['verify_ssl'].lower() == 'true')
+        if any(result[1].status != 'ok' for result in detailed_results["must-allow"]):
+            logger.error("Self-test failed - couldn't access some sites in 'must-allow' list")
+            result = "error"
+        elif any(result[1].status != 'blocked' for result in detailed_results["must-block"]):
+            logger.info("Self-test showed filter disabled")
+            result = "filter_disabled"
+        else:
+            logger.info("Self-test showed filter enabled")
+            result = "filter_enabled"
 
-        self.configure()
-        self.queue.start()
+        self.queue.send_selftest_report(
+            self._build_selftest_report(request_id, result, detailed_results))
+
+    def _build_selftest_report(self, request_id, result, detailed_results):
+        must_allow = [self._build_report(request_id, detail, url)
+                      for url, detail in detailed_results["must-allow"]]
+        must_block = [self._build_report(request_id, detail, url)
+                      for url, detail in detailed_results["must-block"]]
+        return {
+            "request_id": request_id,
+            "result": result,
+            "probe_uuid": self.probe_config['uuid'],
+            "network_name": self.isp,
+            "details": {
+                "must-allow": must_allow,
+                "must-block": must_block
+            }
+        }

@@ -7,7 +7,7 @@ import sys
 import configparser
 import logging
 
-from OrgProbe import Probe, APIRequest
+from OrgProbe import run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',
@@ -41,22 +41,4 @@ loaded = config.read(args.config)
 
 logging.info("Loaded %s config files from %s", loaded, args.config)
 
-if config.has_section('api'):
-    def apiconfig(prop, method):
-        try:
-            setattr(APIRequest, prop.upper(), method('api', prop))
-            logging.info("Set %s to %s", prop,
-                         getattr(APIRequest, prop.upper()))
-        except Exception:
-            pass
-
-
-    apiconfig('https', config.getboolean)
-    apiconfig('host', config.get)
-    apiconfig('port', config.getint)
-    apiconfig('version', config.get)
-
-probe = Probe(config)
-
-logging.debug("Entering run mode")
-sys.exit(probe.run(args))
+sys.exit(run(config, args.profile))

@@ -4,9 +4,7 @@ import pika
 
 
 class AMQPQueue(object):
-    SIG_KEYS = ["probe_uuid", "url", "status", "date", "config"]
-
-    def __init__(self, opts, network, queue_name, signer, test_method, lifetime=None):
+    def __init__(self, opts, network, queue_name, signer, lifetime=None):
         creds = pika.PlainCredentials(
             opts['userid'],
             opts['passwd'],
@@ -25,9 +23,15 @@ class AMQPQueue(object):
         self.alive = True
         self.count = 0
         self.prefetch = int(opts['prefetch']) if 'prefetch' in opts else None
-        self.test_method = test_method
 
-    def start(self):
+        self.conn = None
+        self.ch = None
+        self.consumer_tag = None
+
+        self.callback = None
+
+    def start(self, callback):
+        self.callback = callback
         self.conn = pika.SelectConnection(
             self.params,
             on_open_callback=self.on_open,
@@ -48,10 +52,12 @@ class AMQPQueue(object):
     def decode_msg(self, channel, method, props, msg):
         # this is a wrapper callback that decodes the json data
         # before passing it to the probe's real callback
+        self.ch.basic_ack(method.delivery_tag)
+        logging.info(msg)
         data = json.loads(msg.decode('utf8'))
         logging.debug("Got data: %s", data)
-        self.ch.basic_ack(method.delivery_tag)
-        self.test_method(data)
+
+        self.callback(data)
         self.count += 1
         logging.debug("Count: %s, Lifetime: %s", self.count, self.lifetime)
         if self.lifetime is not None and self.count >= self.lifetime:
@@ -65,14 +71,31 @@ class AMQPQueue(object):
     def close(self):
         self.conn.close()
 
-    def send(self, report, urlhash=None):
+    def send_report(self, report, urlhash=None):
+        routing_key = 'results.' + self.network + '.' + \
+            urlhash if urlhash is not None else ''
+        report['date'] = self.signer.timestamp()
+
+        report['signature'] = self.signer.get_signature(
+            args=report,
+            keys=["probe_uuid", "url", "status", "date", "config"])
+
+        self.send(routing_key, report)
+
+    def send_selftest_report(self, report):
+        routing_key = 'selftest'
+        report['date'] = self.signer.timestamp()
+
+        report['signature'] = self.signer.get_signature(
+            args=report,
+            keys=["probe_uuid", "result", "date"])
+
+        self.send(routing_key, report)
+
+    def send(self, routing_key, report):
         """Sends a report back to the server"""
 
-        report['date'] = self.signer.timestamp()
-        report['signature'] = self.signer.get_signature(report, self.SIG_KEYS)
-
         msg = json.dumps(report)
-        key = 'results.' + self.network + '.' + \
-              urlhash if urlhash is not None else ''
-        logging.debug("Sending result with key: %s", key)
-        self.ch.basic_publish('org.blocked', key, msg)
+
+        logging.debug("Sending report with routing_key: %s", routing_key)
+        self.ch.basic_publish('org.blocked', routing_key, msg)

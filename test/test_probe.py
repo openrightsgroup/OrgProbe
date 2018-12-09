@@ -1,96 +1,166 @@
-import logging
-import configparser
+import json
 
 import pytest
-from OrgProbe.probe import Probe
-from OrgProbe.match import RulesMatcher
+from mock import Mock
+from pytest import raises
 
-from test.mock_server import tcp_server_that_times_out, http_server_that_returns_success, \
-    https_server_that_returns_success
-
-Probe.LOGGER.setLevel(logging.FATAL)
+from OrgProbe.amqpqueue import AMQPQueue
+from OrgProbe.probe import Probe, SelfTestError
+from OrgProbe.result import Result
+from OrgProbe.url_tester import UrlTester
 
 
 @pytest.fixture
-def probe():
-    probe = Probe({})
-    probe.probe = {}
-    probe.rules_matcher = RulesMatcher([], [], [])
-    return probe
+def mock_probe_config():
+    return {
+        'uuid': '01234567890123456788',
+        'secret': 'secret',
+        'queue': 'org',
+        'selftest': 'False'
+    }
 
 
-def test_config_no_accounting_section(probe):
-    probe.config = configparser.ConfigParser()
-    probe.setup_accounting()
-    assert probe.counters is None
+@pytest.fixture
+def mock_api_config():
+    return json.loads("""
+    {
+        "org-block-rules": "0.2.3",
+        "rules": [
+            {
+                "isp": "T-Mobile",
+                "match": [
+                    "re:body:TMobileBodyRule"
+                ]
+            },
+            {
+                "isp": "EE",
+                "match": [
+                    "re:url:EEBodyRule"
+                ]
+            }
+        ],
+        "self-test": {
+            "must-allow": [
+                "http://must.allow.fakedomain"
+            ],
+            "must-block": [
+                "http://must.block.fakedomain"
+            ]
+        },
+        "version": "2018012301"
+    }
+    """)
 
 
-def test_config_no_accounting_key(probe):
-    probe.config = configparser.ConfigParser()
-    probe.config.read_string(u"""[accounting]""")
-    probe.setup_accounting()
-    assert probe.counters is None
+@pytest.fixture
+def mock_amqp_queue():
+    return Mock(AMQPQueue)
 
 
-def test_config_no_accounting_value(probe):
-    probe.config = configparser.ConfigParser()
-    probe.config.read_string(u"""[accounting]\nredis_server=""")
-    probe.setup_accounting()
-    assert probe.counters is None
+@pytest.fixture()
+def mock_url_tester():
+    mock_url_tester = Mock(UrlTester)
+
+    def test_url(url):
+        if "must.block.fakedomain" in url:
+            return Result('blocked', 200)
+        else:
+            return Result('ok', 200)
+
+    mock_url_tester.test_url.side_effect = test_url
+    return mock_url_tester
 
 
-def test_config_with_accounting(probe, mocker):
-    Accounting = mocker.patch('OrgProbe.probe.Accounting')
-
-    instance = Accounting.return_value
-
-    probe.config = configparser.ConfigParser()
-    probe.config.read_string(u"""[accounting]\nredis_server=foo""")
-    probe.isp = "ExampleISP"
-
-    probe.setup_accounting()
-
-    Accounting.assert_called_with(probe.config, "exampleisp", probe.probe)
-    assert probe.counters is instance
-
-
-def test_retrieve_not_existent(probe):
-    result = probe.test_url('http://does.not.exist.example.foobar')
-    assert result.status == 'dnserror'
-    assert result.code == -1
-    assert result.ip is None
+@pytest.fixture
+def probe(mock_amqp_queue,
+          mock_api_config,
+          mock_url_tester,
+          mock_probe_config):
+    return lambda: Probe(
+        url_tester=mock_url_tester,
+        queue=mock_amqp_queue,
+        isp="FakeISP",
+        ip="1.2.3.4",
+        probe_config=mock_probe_config,
+        apiconfig=mock_api_config)
 
 
-def test_retrieve_invalid(probe):
-    result = probe.test_url('bob')
-    assert result.status == 'error'
-    assert result.code == -1
-    assert result.ip is None
+def test_successful_check(mock_amqp_queue, probe):
+    probe().run_test({
+        "url": "http://whatever",
+        "hash": '',
+        "request_id": "000"
+    })
+
+    report = mock_amqp_queue.send_report.call_args[0][0]
+    assert report['status'] == 'ok'
+    assert report['request_id'] == '000'
 
 
-def test_no_https(probe):
-    with http_server_that_returns_success() as port:
-        result = probe.test_url('http://localhost:{}'.format(port))
-        assert result.status == 'ok'
-        assert result.code == 200
-        assert result.ssl_verified is None
-        assert result.ssl_fingerprint is None
-        assert result.ip is not None
+def test_selftest_successful(mock_amqp_queue, probe):
+    probe().run_test({
+        "action": "run_selftest",
+        "request_id": "001"
+    })
+
+    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
+    assert report["result"] == "filter_enabled"
 
 
-def test_https(probe):
-    with https_server_that_returns_success() as port:
-        result = probe.test_url('https://localhost:{}/'.format(port))
-        assert result.status == 'ok'
-        assert result.code == 200
-        assert not result.ssl_verified
-        assert result.ssl_fingerprint.startswith('55:71:61:C3')
+def test_selftest_must_block_site_allowed(mock_amqp_queue,
+                                          probe,
+                                          mock_url_tester):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('ok', 200)
+
+    probe().run_test({
+        "action": "run_selftest",
+        "request_id": "001"
+    })
+
+    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
+    assert report["result"] == "filter_disabled"
 
 
-def test_timeout(probe):
-    with tcp_server_that_times_out() as port:
-        result = probe.test_url('http://localhost:{}'.format(port))
-        assert result.status == 'timeout'
-        assert result.code == -1
-        assert result.ssl_verified is None
-        assert result.ssl_fingerprint is None
+def test_selftest_must_allow_site_blocked(mock_amqp_queue,
+                                          probe,
+                                          mock_url_tester):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('blocked', 200)
+
+    probe().run_test({
+        "action": "run_selftest",
+        "request_id": "001"
+    })
+
+    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
+    assert report["result"] == "error"
+
+
+def test_initial_selftest_successful(probe,
+                                     mock_probe_config):
+    mock_probe_config['selftest'] = 'True'
+
+    probe().run_startup_selftest()
+
+
+def test_initial_selftest_must_block_site_allowed(probe,
+                                                  mock_url_tester,
+                                                  mock_probe_config):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('ok', 200)
+    mock_probe_config['selftest'] = 'True'
+
+    with raises(SelfTestError):
+        probe().run_startup_selftest()
+
+
+def test_initial_selftest_must_allow_site_blocked(probe,
+                                                  mock_url_tester,
+                                                  mock_probe_config):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('blocked', 200)
+    mock_probe_config['selftest'] = 'True'
+
+    with raises(SelfTestError):
+        probe().run_startup_selftest()
