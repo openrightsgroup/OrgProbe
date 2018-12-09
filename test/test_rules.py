@@ -15,8 +15,7 @@ class FakeRequest(object):
 
 matcher = RulesMatcher(
     [
-        "re:url:^http://www\\.talktalk\\.co\\.uk/" +
-        "notice/parental-controls\\?accessurl",
+        "re:url:^http://www\\.talktalk\\.co\\.uk/notice/parental-controls\\?accessurl",
         "re:url:^http://www\\.siteblocked\\.org/piratebay\\.html\\?"
     ],
     ['PARENTAL', 'COPYRIGHT'],
@@ -27,9 +26,8 @@ matcher = RulesMatcher(
 def test_match():
     result = matcher.test_response(
         FakeRequest(
-            "http://www.talktalk.co.uk/notice/parental-controls?" +
-            "accessurl=d3d3LnhoYW1zdGVyLmNvbQ==&" +
-            "urlclassname=UG9ybm9ncmFwaHkgJiBWaW9sZW5jZQ==",
+            ("http://www.talktalk.co.uk/notice/parental-controls?accessurl=d3d3LnhoYW1zdGVyLmNvbQ=="
+             "&urlclassname=UG9ybm9ncmFwaHkgJiBWaW9sZW5jZQ=="),
             200,
             [
                 FakeRequest('http://naughtysite.com', 302)

@@ -169,7 +169,7 @@ def _setup_queue(config, probe_config, signer, isp):
     logger.debug("Setting up AMQP with options: %s", opts)
     lifetime = int(probe_config['lifetime']) if 'lifetime' in probe_config else None
     return AMQPQueue(opts,
-                     isp.lower().replace(' ', '_'),
+                     isp.lower().replace(' ', '_'),  # TODO: get queue name from API response
                      probe_config.get('queue', 'org'),
                      signer,
                      lifetime)

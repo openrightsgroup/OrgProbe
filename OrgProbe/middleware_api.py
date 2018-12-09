@@ -6,8 +6,8 @@ class MiddlewareAPI(object):
     def __init__(self, config, signer):
         self.signer = signer
 
-        if config.has_option('api','url'):
-            self.url_base = config.get('api','url')
+        if config.has_option('api', 'url'):
+            self.url_base = config.get('api', 'url')
         else:
             # backwards compatibility with old config keys
             https = config.getboolean('api', 'https', fallback=True)
