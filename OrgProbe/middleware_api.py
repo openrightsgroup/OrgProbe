@@ -6,16 +6,20 @@ class MiddlewareAPI(object):
     def __init__(self, config, signer):
         self.signer = signer
 
-        https = config.getboolean('api', 'https', fallback=True)
-        host = config.get('api', 'host')
-        port = config.getint('api', 'port', fallback=443)
-        version = config.get('api', 'version', fallback='1.2')
+        if config.has_option('api','url'):
+            self.url_base = config.get('api','url')
+        else:
+            # backwards compatibility with old config keys
+            https = config.getboolean('api', 'https', fallback=True)
+            host = config.get('api', 'host')
+            port = config.getint('api', 'port', fallback=443)
+            version = config.get('api', 'version', fallback='1.2')
 
-        self.url_base = "{}://{}:{}/{}".format(
-            'https' if https else 'http',
-            host,
-            port,
-            version)
+            self.url_base = "{}://{}:{}/{}".format(
+                'https' if https else 'http',
+                host,
+                port,
+                version)
 
     def status_ip(self, public_ip, probe_uuid):
         url = 'status/ip'
