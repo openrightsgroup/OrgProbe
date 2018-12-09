@@ -16,15 +16,11 @@ Requires python 2.7.
 
 ## Run
 
-    python orgprobe -c config/example.config.ini
+    python orgprobe-daemon -c config/example.config.ini
 
 An example config file is included.  You'll need to use the new-user signup and
  probe registration calls in the API to get credentials.  The registration 
  routine built into OrgProbe is alpha-quality at best.
-
-If you're running the Blocking-Middleware Vagrant VM, you can start OrgProbe 
- with the `vagrant.config.ini` config file, which will start a nice fast 
- HTTP-mode poll against the FakeISP set up in the VM database.
 
 ## Unit Tests
 
@@ -38,7 +34,7 @@ To run the unit tests against all currently supported python versions,
 On Startup:
 
 * Retrieve API config from Middleware, unless overridden locally.
-* Determine own IP address via call to Middleware, and hence  determine likely.
+* Determine own IP address via call to Middleware, and hence  determine likely
   ISP.  If this can't be determined then it should be overridden manually in 
   the configuration.
 * Run self test using a list of known available and known blocked sites for 
