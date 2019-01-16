@@ -12,7 +12,7 @@ def test_unicode():
     assert r.title == "Some text here with a £ sign"
     assert isinstance(r.title, str)
     assert str(r) == """<Result: status="ok" code="200" category="None" type="None" ip="None" body_length="0" """ \
-        """ssl_verified="None" ssl_fingerprint="None" final_url="None" title="Some text here with a £ sign">"""
+        """ssl_verified="None" ssl_fingerprint="None" final_url="None" resolved_ip="None" title="Some text here with a £ sign">"""
     logging.info("result: %s", r)
 
 
@@ -22,4 +22,4 @@ def test_utf8():
     assert r.title == "£20"
     assert isinstance(r.title, str)
     assert str(r) == """<Result: status="ok" code="200" category="None" type="None" ip="None" body_length="0" """ \
-        """ssl_verified="None" ssl_fingerprint="None" final_url="None" title="£20">"""
+        """ssl_verified="None" ssl_fingerprint="None" final_url="None" resolved_ip="None" title="£20">"""

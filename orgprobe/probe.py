@@ -75,7 +75,8 @@ class Probe(object):
             'ssl_verified': None,
             'ssl_fingerprint': result.ssl_fingerprint,
             'request_id': request_id,
-            'final_url': result.final_url
+            'final_url': result.final_url,
+            'resolved_ip': result.resolved_ip
         }
         if self.probe_config.get('verify_ssl', '').lower() == 'true':
             report.update({

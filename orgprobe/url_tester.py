@@ -45,6 +45,7 @@ class UrlTester:
         logger.info("Result for: %s : %s", url, result.status)
         return result
 
+
     def _test_url_no_accounting(self, url):
         try:
             with contextlib.closing(requests.get(
@@ -52,7 +53,8 @@ class UrlTester:
                     headers=self.headers,
                     timeout=self.timeout,
                     verify=self.verify_ssl,
-                    stream=True
+                    stream=True,
+                    hooks={'response': self.requests_peeraddr_hook}
             )) as req:
                 try:
                     ssl_verified = None
@@ -67,6 +69,7 @@ class UrlTester:
 
                     result = self.rules_matcher.test_response(req)
                     result.ip = ip
+                    result.resolved_ip = req.history[0].peername if req.history else req.peername
                     result.ssl_fingerprint = ssl_fingerprint
                     result.ssl_verified = ssl_verified
                     result.final_url = req.url
@@ -105,6 +108,11 @@ class UrlTester:
         except Exception as v:
             logger.warn("Connection error: %s", v)
             return Result('error', -1)
+
+    @classmethod
+    def requests_peeraddr_hook(cls, r, *args, **kw):
+        r.peername = cls.get_peer_address(r)
+        return r
 
     @staticmethod
     def get_peer_address(req):
