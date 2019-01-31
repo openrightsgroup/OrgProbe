@@ -4,7 +4,7 @@ import pika
 
 
 class AMQPQueue(object):
-    def __init__(self, opts, network, queue_name, signer, lifetime=None, results_key_prefix = None):
+    def __init__(self, opts, network, queue_name, signer, lifetime=None):
         creds = pika.PlainCredentials(
             opts['userid'],
             opts['passwd'],
@@ -23,7 +23,6 @@ class AMQPQueue(object):
         self.alive = True
         self.count = 0
         self.prefetch = int(opts['prefetch']) if 'prefetch' in opts else None
-        self.results_key_prefix = results_key_prefix or 'results'
 
         self.conn = None
         self.ch = None
@@ -73,7 +72,7 @@ class AMQPQueue(object):
         self.conn.close()
 
     def send_report(self, report, urlhash=None):
-        routing_key = self.results_key_prefix + '.' + self.network + '.' + \
+        routing_key = 'results.' + self.network + '.' + \
             urlhash if urlhash is not None else ''
         report['date'] = self.signer.timestamp()
 

@@ -172,6 +172,4 @@ def _setup_queue(config, probe_config, signer, isp):
                      isp.lower().replace(' ', '_'),  # TODO: get queue name from API response
                      probe_config.get('queue', 'org'),
                      signer,
-                     lifetime,
-                     probe_config.get('results_key')
-                     )
+                     lifetime)
