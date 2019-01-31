@@ -12,6 +12,8 @@ class AMQPQueue(object):
         self.params = pika.ConnectionParameters(
             host=opts['host'],
             credentials=creds,
+            virtual_host=opts.get('vhost', '/'),
+            port=int(opts.get('port', 5672)),
             heartbeat_interval=15,
         )
         self.network = network
