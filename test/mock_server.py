@@ -7,8 +7,7 @@ import thread
 
 
 CERTIFICATE_FINGERPRINT = \
-    "1C:8B:97:C0:5F:4A:EF:1E:6B:88:57:BF:CC:2F:96:E5:" \
-    "77:DA:9C:E3:14:11:9F:54:9F:BE:45:7B:D8:51:B4:95"
+    "42:6D:9E:65:5A:25:2A:DA:23:EE:FC:60:22:5C:51:91:6E:C1:8E:45:7C:C5:05:12:56:C5:D3:CD:7E:74:A0:B9"
 
 
 class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
