@@ -56,24 +56,17 @@ class UrlTester:
                     timeout=self.timeout,
                     verify=self.verify_ssl,
                     stream=True,
-                    hooks={'response': self.requests_peeraddr_hook}
+                    hooks={'response': self.run_response_hooks}
             )) as req:
                 try:
-                    ssl_verified = None
-                    ssl_fingerprint = None
-                    ip = self.get_peer_address(req)
-
+                    ip = req.peername
                     logger.debug("Got IP: %s", ip)
-
-                    if req.url.startswith('https'):
-                        ssl_verified = req.raw.connection.is_verified
-                        ssl_fingerprint = self.get_ssl_fingerprint(req)
 
                     result = self.rules_matcher.test_response(req)
                     result.ip = ip
                     result.resolved_ip = req.history[0].peername if req.history else req.peername
-                    result.ssl_fingerprint = ssl_fingerprint
-                    result.ssl_verified = ssl_verified
+                    result.ssl_fingerprint = req.ssl_fingerprint
+                    result.ssl_verified = req.ssl_verified
                     result.final_url = req.url
                     result.request_data = self.record_request_data(req)
                     return result
@@ -137,9 +130,10 @@ class UrlTester:
         return out
 
     @classmethod
-    def requests_peeraddr_hook(cls, r, *args, **kw):
+    def run_response_hooks(cls, r, *args, **kw):
         r.peername = cls.get_peer_address(r)
-        return r
+        r.ssl_fingerprint = cls.get_ssl_fingerprint(r)
+        r.ssl_verified = cls.get_ssl_is_verified(r)
 
     @staticmethod
     def get_peer_address(req):
@@ -156,6 +150,8 @@ class UrlTester:
 
     @staticmethod
     def get_ssl_fingerprint(req):
+        if not req.url.startswith('https:'):
+            return None
         try:
             hexstr = hashlib.sha256(req.raw.connection.sock.getpeercert(True)).hexdigest()
             ssl_fingerprint = ":".join([hexstr[i:i + 2].upper() for i in range(0, len(hexstr), 2)])
@@ -164,3 +160,9 @@ class UrlTester:
         except Exception as exc:
             logger.debug("SSL fingerprint error: %s", exc)
             raise
+
+    @staticmethod
+    def get_ssl_is_verified(req):
+        if not req.url.startswith('https:'):
+            return None
+        return req.raw.connection.is_verified
