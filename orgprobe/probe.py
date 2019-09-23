@@ -82,6 +82,8 @@ class Probe(object):
             report.update({
                 'ssl_verified': result.ssl_verified,
             })
+        if self.probe_config.get('record_requests', '').lower() == 'true':
+            report['request_data'] = result.request_data
         return report
 
     def _run_selftest(self, request_id):

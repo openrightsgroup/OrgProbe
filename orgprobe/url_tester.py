@@ -28,6 +28,8 @@ class UrlTester:
         else:
             self.verify_ssl = False
 
+        self.do_record_request_data = (probe_config.get('record_request_data','').lower() == 'true')
+
         self.timeout = int(probe_config.get('timeout', 5))
 
     def test_url(self, url):
@@ -73,6 +75,7 @@ class UrlTester:
                     result.ssl_fingerprint = ssl_fingerprint
                     result.ssl_verified = ssl_verified
                     result.final_url = req.url
+                    result.request_data = self.record_request_data(req)
                     return result
                 except Exception as v:
                     logger.error("Response test error: %s", v)
@@ -108,6 +111,30 @@ class UrlTester:
         except Exception as v:
             logger.warn("Connection error: %s", v)
             return Result('error', -1)
+
+    def record_request_data(self, req):
+        if not self.do_record_request_data:
+            return None
+        hashmethod = lambda x: hashlib.sha256(x).hexdigest()
+        out = []
+        for r in req.history + [req]:
+            rq = r.request
+            out.append({
+                'req': {
+                    'url': rq.url,
+                    'headers': dict(rq.headers.items()),
+                    'body': rq.body,
+                    'hash': None if rq.body is None else hashmethod(rq.body),
+                    'method': rq.method
+                    },
+                'rsp': {
+                    'headers': dict(r.headers.items()),
+                    'content': r.content[:1024],
+                    'hash': hashmethod(r.content),
+                    'status': r.status_code,
+                    }
+                })
+        return out
 
     @classmethod
     def requests_peeraddr_hook(cls, r, *args, **kw):
