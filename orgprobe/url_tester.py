@@ -28,7 +28,7 @@ class UrlTester:
         else:
             self.verify_ssl = False
 
-        self.do_record_request_data = (probe_config.get('record_request_data','').lower() == 'true')
+        self.do_record_request_data = (probe_config.get('record_requests','').lower() == 'true')
 
         self.timeout = int(probe_config.get('timeout', 5))
 
@@ -125,6 +125,9 @@ class UrlTester:
                     'content': r.content[:1024],
                     'hash': hashmethod(r.content),
                     'status': r.status_code,
+                    'ssl_fingerprint': r.ssl_fingerprint,
+                    'ssl_verified': r.ssl_verified,
+                    'ip': r.peername,
                     }
                 })
         return out

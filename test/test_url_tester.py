@@ -14,7 +14,8 @@ def url_tester(mock_rules_matcher):
         url_tester = UrlTester(
             probe_config={
                 "secret": "secret",
-                "verify_ssl": "false"
+                "verify_ssl": "false",
+                "record_requests": "true"
             },
             counters=None,
             rules_matcher=mock_rules_matcher
@@ -63,6 +64,12 @@ def test_no_https(url_tester):
         assert result.ssl_fingerprint is None
         assert result.ip is not None
 
+        # result recording
+        assert len(result.request_data) > 0
+        assert result.request_data[0]['rsp']['ip'] is not None
+        assert result.request_data[0]['rsp']['ssl_fingerprint'] is None
+        assert result.request_data[0]['rsp']['ssl_verified'] is None
+
 
 @pytest.mark.filterwarnings('ignore:Unverified HTTPS request is being made')
 def test_https(url_tester):
@@ -72,6 +79,12 @@ def test_https(url_tester):
         assert result.code == 200
         assert not result.ssl_verified
         assert result.ssl_fingerprint == CERTIFICATE_FINGERPRINT
+
+        # result recording
+        assert len(result.request_data) > 0
+        assert result.request_data[0]['rsp']['ip'] is not None
+        assert result.request_data[0]['rsp']['ssl_fingerprint'] is not None
+        assert result.request_data[0]['rsp']['ssl_verified'] is not None
 
 
 @pytest.mark.filterwarnings('ignore:Certificate for localhost has no `subjectAltName`')
@@ -83,6 +96,12 @@ def test_https_with_verify_ssl(url_tester):
         assert result.code == 200
         assert result.ssl_verified
         assert result.ssl_fingerprint == CERTIFICATE_FINGERPRINT
+
+        # result recording
+        assert len(result.request_data) > 0
+        assert result.request_data[0]['rsp']['ip'] is not None
+        assert result.request_data[0]['rsp']['ssl_fingerprint'] == CERTIFICATE_FINGERPRINT
+        assert result.request_data[0]['rsp']['ssl_verified'] is True
 
 
 def test_timeout(url_tester):
