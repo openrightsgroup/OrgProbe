@@ -84,6 +84,7 @@ class Probe(object):
             })
         if self.probe_config.get('record_requests', '').lower() == 'true':
             report['request_data'] = result.request_data
+            report['test_uuid'] = result.test_uuid
         return report
 
     def _run_selftest(self, request_id):

@@ -116,14 +116,14 @@ class UrlTester:
                 'req': {
                     'url': rq.url,
                     'headers': dict(rq.headers.items()),
-                    'body': rq.body,
-                    'hash': None if rq.body is None else hashmethod(rq.body),
+                    'body': rq.body or None,
+                    'hash': hashmethod(rq.body) if rq.body else None,
                     'method': rq.method
                     },
                 'rsp': {
                     'headers': dict(r.headers.items()),
-                    'content': r.content[:1024],
-                    'hash': hashmethod(r.content),
+                    'content': r.content[:1024] or None,
+                    'hash': hashmethod(r.content) if r.content else None,
                     'status': r.status_code,
                     'ssl_fingerprint': r.ssl_fingerprint,
                     'ssl_verified': r.ssl_verified,
