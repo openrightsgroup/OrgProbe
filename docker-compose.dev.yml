@@ -1,0 +1,21 @@
+---
+# Use this compose file to link an instance of the real probe 
+# to the docker development environment
+
+version: '3'
+services:
+  probe:
+    build:
+      context: .
+      args:
+        - CONFIGFILE=config/docker.dev.config.ini 
+      dockerfile: Dockerfile
+    external_links:
+      - api
+      - amqp
+    networks:
+      - blockingmiddleware_default
+networks:
+  blockingmiddleware_default:
+    external: true
+
