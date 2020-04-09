@@ -7,8 +7,6 @@ CHARSET = 'utf8'
 
 
 class RulesMatcher(object):
-    READ_SIZE = 8192
-
     def __init__(self, rules, blocktype, categorizor):
         self.rules = rules
         self.blocktype = blocktype or []
@@ -34,13 +32,9 @@ class RulesMatcher(object):
 
         return None
 
-    def test_response(self, req):
+    def test_response(self, req, body):
         category = ''
-        if req.headers['content-type'].lower().startswith('text'):
-            body = next(req.iter_content(self.READ_SIZE))
-        else:
-            # we're not downloading images
-            body = ''
+
         logging.debug("Read body length: %s", len(body))
         for rulenum, rule in enumerate(self.rules):
             if self.match_rule(req, body, rule) is True:

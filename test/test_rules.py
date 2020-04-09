@@ -4,13 +4,14 @@ from orgprobe.match import RulesMatcher
 
 
 class FakeRequest(object):
+    SAMPLETITLE = "test content <title>foo</title>"
     def __init__(self, url, status_code, history=None):
         self.status_code = status_code
         self.url = url
         if history:
             self.history = history
         self.headers = {"content-type": "text/html; charset=utf-8"}
-        self.iter_content = lambda x: ["test content <title>foo</title>"].__iter__()
+        self.iter_content = lambda x: [self.SAMPLETITLE].__iter__()
 
 
 matcher = RulesMatcher(
@@ -32,7 +33,7 @@ def test_match():
             [
                 FakeRequest('http://naughtysite.com', 302)
             ]
-        ))
+        ), FakeRequest.SAMPLETITLE)
     assert result.status == "blocked"
     assert result.code == 302
     assert result.category == "Pornography & Violence"
@@ -42,7 +43,7 @@ def test_match():
 
 def test_no_match():
     result = matcher.test_response(
-        FakeRequest('http://example.com', 200))
+        FakeRequest('http://example.com', 200), '')
     assert result.status == "ok"
     assert result.code == 200
     assert result.category is None
@@ -52,7 +53,8 @@ def test_copyright_match():
     result = matcher.test_response(
         FakeRequest('http://www.siteblocked.org/piratebay.html?',
                     200,
-                    [FakeRequest('http://example.com', 302)]))
+                    [FakeRequest('http://example.com', 302)]),
+                    '')
     assert result.status == "blocked"
     assert result.code == 302
     assert result.category is None

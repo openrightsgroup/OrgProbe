@@ -14,6 +14,8 @@ DEFAULT_USER_AGENT = 'OrgProbe/2.0.0 (+http://www.blocked.org.uk)'
 
 
 class UrlTester:
+    READ_SIZE = 8192
+
 
     def __init__(self, probe_config, counters, rules_matcher):
         self.counters = counters
@@ -60,15 +62,17 @@ class UrlTester:
             )) as req:
                 try:
                     ip = req.peername
-                    logger.debug("Got IP: %s", ip)
 
-                    result = self.rules_matcher.test_response(req)
-                    result.ip = ip
+                    body = self.fetch_body(req)
+
+                    result = self.rules_matcher.test_response(req, body)
+                    result.ip = req.peername
+                    logger.debug("Got IP: %s", result.ip)
                     result.resolved_ip = req.history[0].peername if req.history else req.peername
                     result.ssl_fingerprint = req.ssl_fingerprint
                     result.ssl_verified = req.ssl_verified
                     result.final_url = req.url
-                    result.request_data = self.record_request_data(req)
+                    result.request_data = self.record_request_data(req, body)
                     return result
                 except Exception as v:
                     logger.error("Response test error: %s", v)
@@ -105,13 +109,36 @@ class UrlTester:
             logger.warn("Connection error: %s", v)
             return Result('error', -1)
 
-    def record_request_data(self, req):
+    def get_body_iter(self, req):
+        return req.iter_content(self.READ_SIZE)
+
+    def fetch_body(self, req):
+        if req.headers['content-type'].lower().startswith('text'):
+            body = next(self.get_body_iter(req))
+        else:
+            # we're not downloading images
+            body = ''
+        return body
+
+    def record_request_data(self, req, body):
         if not self.do_record_request_data:
             return None
         hashmethod = lambda x: hashlib.sha256(x).hexdigest()
         out = []
         for r in req.history + [req]:
+            content = None
+            hashcalc = hashlib.sha256()
             rq = r.request
+            if r is req:  # last step in the history
+                content = body
+                hashcalc.update(body)
+                for part in self.get_body_iter(req):
+                    hashcalc.update(part)
+            else:
+                for part in self.get_body_iter(r):
+                    if content is None:
+                        content = part  # save first part for history recording
+                    hashcalc.update(part)
             out.append({
                 'req': {
                     'url': rq.url,
@@ -122,8 +149,8 @@ class UrlTester:
                     },
                 'rsp': {
                     'headers': dict(r.headers.items()),
-                    'content': r.content[:1024] or None,
-                    'hash': hashmethod(r.content) if r.content else None,
+                    'content': content[:1024] if content else None,
+                    'hash': hashcalc.hexdigest() if content else None,
                     'status': r.status_code,
                     'ssl_fingerprint': r.ssl_fingerprint,
                     'ssl_verified': r.ssl_verified,

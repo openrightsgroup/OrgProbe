@@ -35,7 +35,7 @@ def url_tester(mock_rules_matcher):
 @pytest.fixture
 def mock_rules_matcher():
     class MockRulesMatcher(object):
-        def test_response(self, response):
+        def test_response(self, response, body):
             return Result('ok', 200, title="title", body_length=1234)
 
     return MockRulesMatcher()
