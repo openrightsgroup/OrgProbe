@@ -48,14 +48,8 @@ class RulesMatcher(object):
                     else req.status_code,
                     category,
                     self.blocktype[rulenum] if self.blocktype else None,
-                    self.extract_title(body),
                     body_length=len(body)
                 )
 
-        return Result('ok', req.status_code, title=self.extract_title(body),
-                      body_length=len(body))
+        return Result('ok', req.status_code, body_length=len(body))
 
-    def extract_title(self, content):
-        match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
-        if match:
-            return match.group(1).decode('utf8', 'replace').strip()

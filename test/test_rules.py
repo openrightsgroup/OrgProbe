@@ -37,7 +37,6 @@ def test_match():
     assert result.status == "blocked"
     assert result.code == 302
     assert result.category == "Pornography & Violence"
-    assert result.title == 'foo'
     assert result.type == 'PARENTAL'
 
 

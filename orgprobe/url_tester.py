@@ -1,6 +1,8 @@
 import contextlib
 import hashlib
 import logging
+import re
+
 
 import requests
 
@@ -49,17 +51,19 @@ class UrlTester:
         logger.info("Result for: %s : %s", url, result.status)
         return result
 
+    def _make_request(self, url):
+        return requests.get(
+            url,
+            headers=self.headers,
+            timeout=self.timeout,
+            verify=self.verify_ssl,
+            stream=True,
+            hooks={'response': self.run_response_hooks}
+        )
 
     def _test_url_no_accounting(self, url):
         try:
-            with contextlib.closing(requests.get(
-                    url,
-                    headers=self.headers,
-                    timeout=self.timeout,
-                    verify=self.verify_ssl,
-                    stream=True,
-                    hooks={'response': self.run_response_hooks}
-            )) as req:
+            with contextlib.closing(self._make_request(url)) as req:
                 try:
                     ip = req.peername
 
@@ -72,6 +76,7 @@ class UrlTester:
                     result.ssl_fingerprint = req.ssl_fingerprint
                     result.ssl_verified = req.ssl_verified
                     result.final_url = req.url
+                    result._title = self.extract_title(body)
                     result.request_data = self.record_request_data(req, body)
                     return result
                 except Exception as v:
@@ -121,24 +126,31 @@ class UrlTester:
         return body
 
     def record_request_data(self, req, body):
+
         if not self.do_record_request_data:
             return None
-        hashmethod = lambda x: hashlib.sha256(x).hexdigest()
+
+        def hashmethod(x):
+            return hashlib.sha256(x).hexdigest()
+
         out = []
         for r in req.history + [req]:
             content = None
             hashcalc = hashlib.sha256()
-            rq = r.request
+
             if r is req:  # last step in the history
                 content = body
                 hashcalc.update(body)
-                for part in self.get_body_iter(req):
-                    hashcalc.update(part)
+                contentiter = self.get_body_iter(req)
             else:
-                for part in self.get_body_iter(r):
-                    if content is None:
-                        content = part  # save first part for history recording
-                    hashcalc.update(part)
+                contentiter = self.get_body_iter(r)
+
+            for part in contentiter:
+                if content is None:
+                    content = part  # save first part for history recording
+                hashcalc.update(part)
+
+            rq = r.request
             out.append({
                 'req': {
                     'url': rq.url,
@@ -196,3 +208,9 @@ class UrlTester:
         if not req.url.startswith('https:'):
             return None
         return req.raw.connection.is_verified
+
+    @staticmethod
+    def extract_title(content):
+        match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
+        if match:
+            return match.group(1).decode('utf8', 'replace').strip()
