@@ -12,12 +12,11 @@ from .signing import RequestSigner
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_USER_AGENT = 'OrgProbe/2.0.0 (+http://www.blocked.org.uk)'
+DEFAULT_USER_AGENT = 'OrgProbe/2.2.0 (+http://www.blocked.org.uk)'
 
 
 class UrlTester:
     READ_SIZE = 8192
-
 
     def __init__(self, probe_config, counters, rules_matcher):
         self.counters = counters
