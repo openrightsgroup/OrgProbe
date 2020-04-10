@@ -16,16 +16,32 @@ class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
     def do_GET(self):
-        # Don't care about the request path.
+        if self.path == '/redir':
+            self.send_redir()
+            return
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
-        self.send_header("Content-length", "2")
+        self.send_header("Content-length", "87")
         self.end_headers()
-        self.wfile.write('OK')
+        self.wfile.write("""<html>
+<head>
+<title>Title Text</title>
+</head>
+<body>
+<h1>Hello!</h1>
+</body>
+</html>
+""")
 
     def log_message(self, format, *args):
         pass
 
+    def send_redir(self):
+        self.send_response(302)
+        self.send_header("Location", "/")
+        self.send_header("Content-length", "16")
+        self.end_headers()
+        self.wfile.write("Redirecting to /")
 
 @contextmanager
 def https_server_that_returns_success():
