@@ -54,6 +54,18 @@ def test_retrieve_invalid(url_tester):
     assert result.code == -1
     assert result.ip is None
 
+
+def test_image(url_tester):
+    with http_server_that_returns_success() as port:
+        result = url_tester().test_url('http://localhost:{}/image.png'.format(port))
+
+        # requests for non-text MIME types should not retrieve payload or log content & digest
+
+        assert result.status == 'ok'
+        assert result.code == 200
+        assert result.request_data[-1]['rsp']['content'] is None
+        assert result.request_data[-1]['rsp']['hash'] is None
+
 def test_redirect(url_tester):
     with http_server_that_returns_success() as port:
         result = url_tester().test_url('http://localhost:{}/redir'.format(port))

@@ -19,6 +19,9 @@ class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if self.path == '/redir':
             self.send_redir()
             return
+        if self.path == '/image.png':
+            self.send_image()
+            return
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
         self.send_header("Content-length", "87")
@@ -42,6 +45,20 @@ class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_header("Content-length", "16")
         self.end_headers()
         self.wfile.write("Redirecting to /")
+
+    def send_image(self):
+        try:
+            self.send_response(200)
+            self.send_header("Content-type", "image/png")
+            self.send_header("Content-length", "16")
+            self.end_headers()
+            self.wfile.write("\x00" * 16)
+        except IOError as exc:
+            if exc.errno == 104:  # connection reset by peer
+                # we expect the connection to hangup, since the probe
+                # does not read image bodies
+                pass
+            raise
 
 @contextmanager
 def https_server_that_returns_success():

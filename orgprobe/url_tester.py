@@ -64,9 +64,7 @@ class UrlTester:
         try:
             with contextlib.closing(self._make_request(url)) as req:
                 try:
-                    ip = req.peername
-
-                    body = self.fetch_body(req)
+                    body, bodyiter = self.fetch_body(req)
 
                     result = self.rules_matcher.test_response(req, body)
                     result.ip = req.peername
@@ -76,7 +74,7 @@ class UrlTester:
                     result.ssl_verified = req.ssl_verified
                     result.final_url = req.url
                     result._title = self.extract_title(body)
-                    result.request_data = self.record_request_data(req, body)
+                    result.request_data = self.record_request_data(req, body, bodyiter)
                     return result
                 except Exception as v:
                     logger.error("Response test error: %s", v)
@@ -118,13 +116,15 @@ class UrlTester:
 
     def fetch_body(self, req):
         if req.headers['content-type'].lower().startswith('text'):
-            body = next(self.get_body_iter(req))
+            body_iter = self.get_body_iter(req)
+            body = next(body_iter)
         else:
             # we're not downloading images
             body = ''
-        return body
+            body_iter = None
+        return body, body_iter
 
-    def record_request_data(self, req, body):
+    def record_request_data(self, req, body, body_iter):
 
         if not self.do_record_request_data:
             return None
@@ -140,14 +140,15 @@ class UrlTester:
             if r is req:  # last step in the history
                 content = body
                 hashcalc.update(body)
-                contentiter = self.get_body_iter(req)
+                contentiter = body_iter
             else:
                 contentiter = self.get_body_iter(r)
 
-            for part in contentiter:
-                if content is None:
-                    content = part  # save first part for history recording
-                hashcalc.update(part)
+            if contentiter is not None:
+                for part in contentiter:
+                    if content is None:
+                        content = part  # save first part for history recording
+                    hashcalc.update(part)
 
             rq = r.request
             out.append({
@@ -161,7 +162,7 @@ class UrlTester:
                 'rsp': {
                     'headers': dict(r.headers.items()),
                     'content': content[:1024] if content else None,
-                    'hash': hashcalc.hexdigest() if content else None,
+                    'hash': hashcalc.hexdigest() if contentiter else None,
                     'status': r.status_code,
                     'ssl_fingerprint': r.ssl_fingerprint,
                     'ssl_verified': r.ssl_verified,
