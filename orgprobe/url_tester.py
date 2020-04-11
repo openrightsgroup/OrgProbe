@@ -31,7 +31,7 @@ class UrlTester:
         else:
             self.verify_ssl = False
 
-        self.do_record_request_data = (probe_config.get('record_requests','').lower() == 'true')
+        self.do_record_request_data = (probe_config.get('record_requests', '').lower() == 'true')
 
         self.timeout = int(probe_config.get('timeout', 5))
 
@@ -200,7 +200,6 @@ class UrlTester:
             return ssl_fingerprint
         except Exception as exc:
             logger.debug("SSL fingerprint error: %s", exc)
-            raise
 
     @staticmethod
     def get_ssl_is_verified(req):

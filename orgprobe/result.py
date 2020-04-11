@@ -1,9 +1,7 @@
 
-import uuid
-
 class Result(object):
     __slots__ = ['status', 'code', 'category', 'type', '_title', 'ip', 'body_length', 'ssl_verified',
-                 'ssl_fingerprint', 'final_url', 'resolved_ip', 'request_data', 'test_uuid']
+                 'ssl_fingerprint', 'final_url', 'resolved_ip', 'request_data']
 
     def __init__(self,
                  status, code, category=None, type=None, title=None, ip=None,
@@ -21,7 +19,6 @@ class Result(object):
         self.final_url = final_url
         self.resolved_ip = resolved_ip
         self.request_data = request_data
-        self.test_uuid = str(uuid.uuid1())
 
     @property
     def title(self):
