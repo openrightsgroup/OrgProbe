@@ -200,7 +200,7 @@ class UrlTester:
             logger.info("Got fingerprint: %s", ssl_fingerprint)
             return ssl_fingerprint
         except Exception as exc:
-            logger.debug("SSL fingerprint error: %s", exc)
+            logger.warn("SSL fingerprint error: %s", exc)
 
     @staticmethod
     def get_ssl_is_verified(req):
