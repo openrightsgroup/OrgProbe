@@ -15,12 +15,18 @@ class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     # this is easiest to do via HTTP/1.1.
     protocol_version = 'HTTP/1.1'
 
+    URL_MAP = {
+        '/redir': 'send_redir',
+        '/image.png': 'send_image',
+        '/send-utf8': 'send_utf8',
+        '/send-iso88591': 'send_iso88591',
+        '/send-nocharset': 'send_nocharset_iso',
+        '/send-nocharset-utf8': 'send_nocharset_utf8',
+    }
+
     def do_GET(self):
-        if self.path == '/redir':
-            self.send_redir()
-            return
-        if self.path == '/image.png':
-            self.send_image()
+        if self.path in self.URL_MAP:
+            getattr(self, self.URL_MAP[self.path])()  # call named function
             return
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
@@ -59,6 +65,34 @@ class HttpHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 # does not read image bodies
                 pass
             raise
+
+    def send_utf8(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=UTF-8')
+        self.send_header('Content-length', '8')
+        self.end_headers()
+        self.wfile.write("\xc2\xa320 GBP")
+
+    def send_iso88591(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=ISO-8859-1')
+        self.send_header('Content-length', '7')
+        self.end_headers()
+        self.wfile.write("\xa320 GBP")
+
+    def send_nocharset_iso(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.send_header('Content-length', '7')
+        self.end_headers()
+        self.wfile.write("\xa320 GBP")
+
+    def send_nocharset_utf8(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.send_header('Content-length', '18')
+        self.end_headers()
+        self.wfile.write("\xc2\xa320 GBP, \xc2\xa390 GBP")
 
 @contextmanager
 def https_server_that_returns_success():

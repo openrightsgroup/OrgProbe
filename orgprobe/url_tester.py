@@ -5,6 +5,7 @@ import re
 
 
 import requests
+import chardet
 
 from .result import Result
 from .signing import RequestSigner
@@ -161,7 +162,7 @@ class UrlTester:
                     },
                 'rsp': {
                     'headers': dict(r.headers.items()),
-                    'content': content[:1024] if content else None,
+                    'content': self.decode_content(content, req.headers.get('Content-type')) if content else None,
                     'hash': hashcalc.hexdigest() if contentiter else None,
                     'status': r.status_code,
                     'ssl_fingerprint': r.ssl_fingerprint,
@@ -213,3 +214,19 @@ class UrlTester:
         match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
         if match:
             return match.group(1).decode('utf8', 'replace').strip()
+
+    @staticmethod
+    def decode_content(content, content_type):
+        charset = None
+        if ';' in content_type:
+            for part in content_type.split('; ', 1)[1].split():
+                (key, value) = part.split('=')
+                if key.lower() == 'charset':
+                    charset = value
+                    break
+        if charset is None:
+            charset = chardet.detect(content)['encoding']
+            # chardet can get confused with very short utf8 strings, reporting iso-8859-1
+            logger.info("Chardet result: %s", charset)
+
+        return content.decode(charset, 'replace')[:1024]
