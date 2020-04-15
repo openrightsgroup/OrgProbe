@@ -78,7 +78,7 @@ class UrlTester:
                     result.request_data = self.record_request_data(req, body, bodyiter)
                     return result
                 except Exception as v:
-                    logger.error("Response test error: %s", v)
+                    logger.error("Response test error: %s: %s", repr(v), v)
                     raise
         except requests.exceptions.SSLError as v:
             logger.warn("SSL Error: %s", v)
