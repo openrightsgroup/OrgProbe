@@ -116,9 +116,12 @@ class UrlTester:
         return req.iter_content(self.READ_SIZE)
 
     def fetch_body(self, req):
-        if req.headers['content-type'].lower().startswith('text'):
+        if req.headers.get('content-type', '').lower().startswith('text'):
             body_iter = self.get_body_iter(req)
-            body = next(body_iter)
+            try:
+                body = next(body_iter)
+            except StopIteration:
+                body = ''
         else:
             # we're not downloading images
             body = ''
@@ -219,10 +222,10 @@ class UrlTester:
     def decode_content(content, content_type):
         charset = None
         if ';' in content_type:
-            for part in content_type.split('; ', 1)[1].split():
+            for part in content_type.split(';', 1)[1].split():
                 (key, value) = part.split('=')
-                if key.lower() == 'charset':
-                    charset = value
+                if key.strip().lower() == 'charset':
+                    charset = value.strip()
                     break
         if charset is None:
             charset = chardet.detect(content)['encoding']
