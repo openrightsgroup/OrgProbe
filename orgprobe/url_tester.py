@@ -75,7 +75,25 @@ class UrlTester:
                     result.ssl_verified = req.ssl_verified
                     result.final_url = req.url
                     result._title = self.extract_title(body)
-                    result.request_data = self.record_request_data(req, body, bodyiter)
+                    result.request_data = self.record_request_data(req)
+
+                    if self.do_record_request_data:
+                        hashcalc = hashlib.sha256()
+
+                        if bodyiter is not None:
+                            hashcalc.update(body)
+                            for part in bodyiter:
+                                hashcalc.update(part)
+
+                        req_record = self.create_request_record(req)
+
+                        req_record['rsp'].update({
+                            'content': self.decode_content(body, req_record['rsp']['headers']) if body else None,
+                            'hash': hashcalc.hexdigest() if bodyiter else None,
+                        })
+
+                        result.request_data.append(req_record)
+
                     return result
                 except Exception as v:
                     logger.error("Response test error: %s: %s", repr(v), v)
@@ -112,12 +130,9 @@ class UrlTester:
             logger.warn("Connection error: %s", v)
             return Result('error', -1)
 
-    def get_body_iter(self, req):
-        return req.iter_content(self.READ_SIZE)
-
     def fetch_body(self, req):
         if req.headers.get('content-type', '').lower().startswith('text'):
-            body_iter = self.get_body_iter(req)
+            body_iter = req.iter_content(self.READ_SIZE)
             try:
                 body = next(body_iter)
             except StopIteration:
@@ -128,52 +143,43 @@ class UrlTester:
             body_iter = None
         return body, body_iter
 
-    def record_request_data(self, req, body, body_iter):
+    @staticmethod
+    def hash(s):
+        return hashlib.sha256(s).hexdigest()
+
+    def record_request_data(self, req):
 
         if not self.do_record_request_data:
             return None
 
-        def hashmethod(x):
-            return hashlib.sha256(x).hexdigest()
-
         out = []
-        for r in req.history + [req]:
-            content = None
-            hashcalc = hashlib.sha256()
-
-            if r is req:  # last step in the history
-                content = body
-                hashcalc.update(body)
-                contentiter = body_iter
-            else:
-                contentiter = self.get_body_iter(r)
-
-            if contentiter is not None:
-                for part in contentiter:
-                    if content is None:
-                        content = part  # save first part for history recording
-                    hashcalc.update(part)
-
-            rq = r.request
-            out.append({
-                'req': {
-                    'url': rq.url,
-                    'headers': dict(rq.headers.items()),
-                    'body': rq.body or None,
-                    'hash': hashmethod(rq.body) if rq.body else None,
-                    'method': rq.method
-                    },
-                'rsp': {
-                    'headers': dict(r.headers.items()),
-                    'content': self.decode_content(content, req.headers.get('Content-type')) if content else None,
-                    'hash': hashcalc.hexdigest() if contentiter else None,
-                    'status': r.status_code,
-                    'ssl_fingerprint': r.ssl_fingerprint,
-                    'ssl_verified': r.ssl_verified,
-                    'ip': r.peername,
-                    }
-                })
+        for r in req.history:
+            request_record = self.create_request_record(r)
+            request_record['rsp'].update({
+                'content': self.decode_content(r.content, request_record['rsp']['headers']) if r.content else None,
+                'hash': self.hash(r.content) if r.content else None,
+            })
+            out.append(request_record)
         return out
+
+    def create_request_record(self, r):
+        rq = r.request
+        return {
+            'req': {
+                'url': rq.url,
+                'headers': rq.headers.items(),
+                'body': rq.body or None,
+                'hash': self.hash(rq.body) if rq.body else None,
+                'method': rq.method
+            },
+            'rsp': {
+                'headers': r.headers.items(),
+                'status': r.status_code,
+                'ssl_fingerprint': r.ssl_fingerprint,
+                'ssl_verified': r.ssl_verified,
+                'ip': r.peername,
+            }
+        }
 
     @classmethod
     def run_response_hooks(cls, r, *args, **kw):
@@ -219,14 +225,24 @@ class UrlTester:
             return match.group(1).decode('utf8', 'replace').strip()
 
     @staticmethod
-    def decode_content(content, content_type):
+    def decode_content(content, headers):
+        """
+        Get a 1024-character snippet(unicode) of the body content, using charset from content-type
+        header if available.
+        """
         charset = None
-        if ';' in content_type:
-            for part in content_type.split(';', 1)[1].split():
-                (key, value) = part.split('=')
-                if key.strip().lower() == 'charset':
-                    charset = value.strip()
-                    break
+        for (name, value) in headers:
+            if name.lower() == 'content-type':
+                logging.debug("Got content-type: %s", value)
+                content_type = value
+
+                if ';' in content_type:
+                    for part in content_type.split(';', 1)[1].split():
+                        (key, value) = part.split('=')
+                        if key.strip().lower() == 'charset':
+                            charset = value.strip().lower()
+                            break
+
         if charset is None:
             charset = chardet.detect(content)['encoding']
             # chardet can get confused with very short utf8 strings, reporting iso-8859-1

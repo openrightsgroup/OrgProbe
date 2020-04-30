@@ -83,13 +83,19 @@ def test_redirect(url_tester):
         assert result.request_data[1]['rsp']['ssl_verified'] is None
         assert result.request_data[1]['rsp']['hash'] == "0a0ba88b1efe73e8915aa4c6b6197f70d51f8bdf1fdc3ecb54d50b55f3d29d61"
 
+def _find_header(headers, hdr):
+    for (name, value) in headers:
+        if name.lower() == hdr.lower():
+            return value
+
 def test_utf8_content(url_tester):
     with http_server_that_returns_success() as port:
         result = url_tester().test_url('http://localhost:{}/send-utf8'.format(port))
         assert result.status == 'ok'
 
         assert result.request_data[-1]['rsp']['content'] == u"\u00a320 GBP"
-        assert result.request_data[-1]['rsp']['headers']['Content-length'] == "8"
+        assert _find_header(result.request_data[-1]['rsp']['headers'], 'Content-type') == "text/html; charset=UTF-8"
+        assert _find_header(result.request_data[-1]['rsp']['headers'], 'Content-length') == "8"
 
 def test_iso8859_content(url_tester):
     with http_server_that_returns_success() as port:
@@ -97,7 +103,7 @@ def test_iso8859_content(url_tester):
         assert result.status == 'ok'
 
         assert result.request_data[-1]['rsp']['content'] == u"\u00a320 GBP"
-        assert result.request_data[-1]['rsp']['headers']['Content-length'] == "7"
+        assert _find_header(result.request_data[-1]['rsp']['headers'], 'Content-length') == "7"
 
 def test_nocharset_content(url_tester):
     with http_server_that_returns_success() as port:
@@ -105,7 +111,7 @@ def test_nocharset_content(url_tester):
         assert result.status == 'ok'
 
         assert result.request_data[-1]['rsp']['content'] == u"\u00a320 GBP"
-        assert result.request_data[-1]['rsp']['headers']['Content-length'] == "7"
+        assert _find_header(result.request_data[-1]['rsp']['headers'], 'Content-length') == "7"
 
 def test_nocharset_content_utf8(url_tester):
     with http_server_that_returns_success() as port:
@@ -113,7 +119,7 @@ def test_nocharset_content_utf8(url_tester):
         assert result.status == 'ok'
 
         assert result.request_data[-1]['rsp']['content'] == u"\u00a320 GBP, \u00a390 GBP"
-        assert result.request_data[-1]['rsp']['headers']['Content-length'] == "18"
+        assert _find_header(result.request_data[-1]['rsp']['headers'], 'Content-length') == "18"
 
 def test_no_https(url_tester):
     with http_server_that_returns_success() as port:
