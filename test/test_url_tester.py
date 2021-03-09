@@ -17,7 +17,6 @@ def url_tester(mock_rules_matcher):
                 "verify_ssl": "false",
                 "record_requests": "true"
             },
-            counters=None,
             rules_matcher=mock_rules_matcher
         )
 
