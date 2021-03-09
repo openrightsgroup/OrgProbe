@@ -6,7 +6,6 @@ from .probe import Probe
 from .middleware_api import MiddlewareAPI
 from .signing import RequestSigner
 from .url_tester import UrlTester
-from .accounting import Accounting
 from .amqpqueue import AMQPQueue
 from .category import Categorizor
 from .match import RulesMatcher
@@ -42,14 +41,8 @@ def run(config, probe_name=None):
         probe_config=probe_config,
         isp=isp
     )
-    counters = setup_accounting(
-        config=config,
-        probe_config=probe_config,
-        isp=isp
-    )
     url_tester = UrlTester(
         probe_config=probe_config,
-        counters=counters,
         rules_matcher=rules_matcher
     )
     queue = _setup_queue(
@@ -153,15 +146,6 @@ def _get_rules_matcher(apiconfig, probe_config, isp):
         logger.error("No rules found and skip_rules=false, terminating")
         sys.exit(1)
 
-
-def setup_accounting(config, probe_config, isp):
-    if not config.get('accounting', 'redis_server', fallback=None):
-        counters = None
-    else:
-        counters = Accounting(config,
-                              isp.lower().replace(' ', '_'), probe_config)
-        counters.check()
-    return counters
 
 
 def _setup_queue(config, probe_config, signer, isp):

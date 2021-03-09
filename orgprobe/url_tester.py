@@ -19,8 +19,7 @@ DEFAULT_USER_AGENT = 'OrgProbe/2.2.0 (+http://www.blocked.org.uk)'
 class UrlTester:
     READ_SIZE = 8192
 
-    def __init__(self, probe_config, counters, rules_matcher):
-        self.counters = counters
+    def __init__(self, probe_config, rules_matcher):
         self.rules_matcher = rules_matcher
         self.signer = RequestSigner(probe_config['secret'])
         self.headers = {
@@ -39,15 +38,10 @@ class UrlTester:
     def test_url(self, url):
         logger.info("Testing URL: %s", url)
 
-        if self.counters:
-            self.counters.requests.add(1)
 
         result = self._test_url_no_accounting(url)
 
-        if self.counters and result.body_length is not None:
-            self.counters.check()
-            self.counters.bytes.add(result.body_length)
-        
+
         logger.info("Result for: %s : %s", url, result.status)
         return result
 
