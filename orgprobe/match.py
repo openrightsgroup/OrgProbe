@@ -40,7 +40,7 @@ class RulesMatcher(object):
             if self.match_rule(req, body, rule) is True:
                 logging.debug("Matched rule: %s; blocked", rule)
                 if self.categorizor:
-                    category = self.categorizor.categorize(req.url)
+                    category = self.categorizor.categorize(req.url, body)
                 return Result(
                     'blocked',
                     req.history[-1].status_code

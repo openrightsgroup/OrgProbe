@@ -1,3 +1,4 @@
+import re
 import logging
 
 try:
@@ -18,7 +19,7 @@ class Categorizor(object):
         """
         self.rule = category_rule.split(':')
 
-    def categorize(self, final_url):
+    def categorize(self, final_url, body=None):
         if self.rule[0] == 'querystring':
             try:
                 qs = urlparse.parse_qs(urlparse.urlparse(final_url).query)
@@ -30,3 +31,15 @@ class Categorizor(object):
                 return param
             except (KeyError, IndexError):
                 return None
+        if self.rule[0] == 're':
+            if self.rule[1] == 'body':
+                flags = None
+
+                if len(self.rule) > 3:
+                    flagtxt = self.rule[3].upper()
+                    flags = sum([re.RegexFlag[x] for x in flagtxt])
+
+                match = re.search(self.rule[2], body or '', flags)
+                if match:
+                    if match.groups():
+                        return match.groups()[-1]
