@@ -1,5 +1,6 @@
 import re
 import logging
+import operator
 
 try:
     import urlparse
@@ -16,6 +17,13 @@ class Categorizor(object):
         parameter, use:
 
         "querystring:category:base64"
+
+        Regex match body with:
+
+        <type>:<field>:<pattern>:<flags>
+        re:body:foo bar (.*):m,i,x
+
+        Flags are comma separated values from python re.RegexFlags
         """
         self.rule = category_rule.split(':')
 
@@ -33,13 +41,16 @@ class Categorizor(object):
                 return None
         if self.rule[0] == 're':
             if self.rule[1] == 'body':
-                flags = None
-
-                if len(self.rule) > 3:
-                    flagtxt = self.rule[3].upper()
-                    flags = sum([re.RegexFlag[x] for x in flagtxt])
+                flags = self._get_flags()
 
                 match = re.search(self.rule[2], body or '', flags)
                 if match:
                     if match.groups():
                         return match.groups()[-1]
+
+    def _get_flags(self):
+        if len(self.rule) < 4:
+            return 0
+        parts = self.rule[3].upper().split(',')
+        ret = reduce(operator.ior, [getattr(re, x) for x in parts if x], 0)
+        return ret
