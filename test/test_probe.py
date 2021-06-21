@@ -1,4 +1,5 @@
 import json
+import datetime
 
 import pytest
 from mock import Mock
@@ -164,3 +165,22 @@ def test_initial_selftest_must_allow_site_blocked(probe,
 
     with raises(SelfTestError):
         probe().run_startup_selftest()
+
+def test_jitter_func(mocker, monkeypatch, probe):
+
+    probe_instance = probe()
+    monkeypatch.setattr(Probe, '_get_timestamp',
+                        staticmethod(lambda: datetime.datetime(2021, 6, 20, 11, 20, 0))
+                        )
+
+    sleeper = mocker.patch("time.sleep")
+    probe_instance._jitter_delay({'submitted': '2021-06-20T11:19:59', 'jitter': True})
+    assert sleeper.called
+
+    sleeper = mocker.patch("time.sleep")
+    probe_instance._jitter_delay({'submitted': '2021-06-20T11:19:59', 'jitter': False})
+    assert not sleeper.called
+
+    sleeper = mocker.patch("time.sleep")
+    probe_instance._jitter_delay({'submitted': '2021-06-20T11:15:00', 'jitter': True})
+    assert not sleeper.called

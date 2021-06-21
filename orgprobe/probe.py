@@ -1,7 +1,11 @@
+import time
 import logging
+import random
+import datetime
 
 logger = logging.getLogger("probe")
 
+JITTER_THRESHOLD = 30
 
 class SelfTestError(Exception):
     pass
@@ -49,6 +53,17 @@ class Probe(object):
             for url in self.apiconfig['self-test']['must-block']:
                 if self.url_tester.test_url(url).status != 'blocked':
                     raise SelfTestError
+
+    @classmethod
+    def _get_timestamp(cls):
+        return datetime.datetime.utcnow()
+
+    @classmethod
+    def _jitter_delay(cls, data):
+        if data.get('jitter', False) and 'submitted' in data:
+            submit_time = datetime.datetime.strptime(data['submitted'], '%Y-%m-%dT%H:%M:%S')
+            if submit_time > cls._get_timestamp() - datetime.timedelta(0, JITTER_THRESHOLD):
+                time.sleep(random.randint(5, 45))
 
     def _test_and_report_url(self, url, urlhash=None, request_id=None):
         logger.debug("test_and_report_url %s, %s, %s", url, urlhash, request_id)
