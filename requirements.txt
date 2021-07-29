@@ -1,5 +1,5 @@
 configparser>=3.5.0
-pika>=0.10.0
+pika>=0.13.0
 requests>=2.12.0
 pyasn1>=0.3.7
 enum>=0.4.7
