@@ -41,12 +41,13 @@ class Probe(object):
         else:
             logger.warn("Dropping message with unknown action: %s", action)
 
-    def run_startup_selftest(self):
+    def run_startup_selftest(self, override=False):
         logger.debug("run_startup_selftest")
 
-        if self.probe_config.get('selftest', 'true').lower() != 'true':
+        if self.probe_config.get('selftest', 'true').lower() != 'true' and not override:
             logger.debug("selftest on startup disabled")
         else:
+            # run the selftest anyway of override == True
             for url in self.apiconfig['self-test']['must-allow']:
                 if self.url_tester.test_url(url).status != 'ok':
                     raise SelfTestError
