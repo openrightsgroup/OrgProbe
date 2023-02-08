@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 
-from .probe import Probe
+from .probe import (Probe, SelfTestError)
 from .middleware_api import MiddlewareAPI
 from .signing import RequestSigner
 from .url_tester import UrlTester
@@ -13,7 +13,7 @@ from .match import RulesMatcher
 logger = logging.getLogger("bootstrapper")
 
 
-def run(config, probe_name=None):
+def run(config, probe_name=None, selftest=False):
 
     probe_config = _extract_probe_config(
         config=config,
@@ -60,7 +60,16 @@ def run(config, probe_name=None):
 
     logger.info("Bootstrap complete")
 
-    probe.run_startup_selftest()
+    try:
+        probe.run_startup_selftest(selftest)
+        if selftest:
+            print(f"OK - {isp} self-test pass")
+            return 0
+    except SelfTestError as exc:
+        if selftest:
+            print(f"CRITICAL - {isp} self-test fail")
+            return 3
+
 
     logger.info("Entering run mode")
     queue.start(callback=probe.run_test)

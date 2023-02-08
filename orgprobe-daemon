@@ -18,6 +18,9 @@ parser.add_argument('--verbose',
                     '-v',
                     action='store_true',
                     help='Verbose operation')
+parser.add_argument('--selftest',
+                    action='store_true',
+                    help='Run self-test and exit')
 parser.add_argument(dest='profile',
                     nargs='?',
                     help='Probe profile name.  If unset then defaults to the first '
@@ -41,4 +44,4 @@ loaded = config.read(args.config)
 
 logging.info("Loaded %s config files from %s", loaded, args.config)
 
-sys.exit(run(config, args.profile))
+sys.exit(run(config, args.profile, args.selftest))
