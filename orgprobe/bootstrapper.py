@@ -69,6 +69,7 @@ def run(config, probe_name=None, selftest=False):
         if selftest:
             print(f"CRITICAL - {isp} self-test fail")
             return 3
+        raise
 
 
     logger.info("Entering run mode")
