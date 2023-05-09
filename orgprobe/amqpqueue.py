@@ -84,16 +84,6 @@ class AMQPQueue(object):
 
         self.send(routing_key, report)
 
-    def send_selftest_report(self, report):
-        routing_key = 'selftest'
-        report['date'] = self.signer.timestamp()
-
-        report['signature'] = self.signer.get_signature(
-            args=report,
-            keys=["probe_uuid", "result", "date"])
-
-        self.send(routing_key, report)
-
     def send(self, routing_key, report):
         """Sends a report back to the server"""
 

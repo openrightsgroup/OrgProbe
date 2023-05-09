@@ -30,16 +30,11 @@ class Probe(object):
         logger.debug("run_test %s", data)
 
         action = data.get('action', 'run_test')
-        if action == "run_test":
-            if 'url' in data:
-                self._test_and_report_url(data['url'], data['hash'], data.get('request_id'))
-            elif 'urls' in data:
-                for url in data['urls']:
-                    self._test_and_report_url(url['url'], data['hash'], request_id=data.get('request_id'))
-        elif action == "run_selftest":
-            self._run_selftest(data['request_id'])
-        else:
-            logger.warn("Dropping message with unknown action: %s", action)
+        if 'url' in data:
+            self._test_and_report_url(data['url'], data['hash'], data.get('request_id'))
+        elif 'urls' in data:
+            for url in data['urls']:
+                self._test_and_report_url(url['url'], data['hash'], request_id=data.get('request_id'))
 
     def run_startup_selftest(self, override=False):
         logger.debug("run_startup_selftest")
@@ -122,21 +117,3 @@ class Probe(object):
             logger.info("Self-test showed filter enabled")
             result = "filter_enabled"
 
-        self.queue.send_selftest_report(
-            self._build_selftest_report(request_id, result, detailed_results))
-
-    def _build_selftest_report(self, request_id, result, detailed_results):
-        must_allow = [self._build_report(request_id, detail, url)
-                      for url, detail in detailed_results["must-allow"]]
-        must_block = [self._build_report(request_id, detail, url)
-                      for url, detail in detailed_results["must-block"]]
-        return {
-            "request_id": request_id,
-            "result": result,
-            "probe_uuid": self.probe_config['uuid'],
-            "network_name": self.isp,
-            "details": {
-                "must-allow": must_allow,
-                "must-block": must_block
-            }
-        }

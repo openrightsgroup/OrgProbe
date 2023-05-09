@@ -98,45 +98,6 @@ def test_successful_check(mock_amqp_queue, probe):
     assert report['request_id'] == '000'
 
 
-def test_selftest_successful(mock_amqp_queue, probe):
-    probe().run_test({
-        "action": "run_selftest",
-        "request_id": "001"
-    })
-
-    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
-    assert report["result"] == "filter_enabled"
-
-
-def test_selftest_must_block_site_allowed(mock_amqp_queue,
-                                          probe,
-                                          mock_url_tester):
-    mock_url_tester.test_url.side_effect = None
-    mock_url_tester.test_url.return_value = Result('ok', 200)
-
-    probe().run_test({
-        "action": "run_selftest",
-        "request_id": "001"
-    })
-
-    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
-    assert report["result"] == "filter_disabled"
-
-
-def test_selftest_must_allow_site_blocked(mock_amqp_queue,
-                                          probe,
-                                          mock_url_tester):
-    mock_url_tester.test_url.side_effect = None
-    mock_url_tester.test_url.return_value = Result('blocked', 200)
-
-    probe().run_test({
-        "action": "run_selftest",
-        "request_id": "001"
-    })
-
-    report = mock_amqp_queue.send_selftest_report.call_args[0][0]
-    assert report["result"] == "error"
-
 
 def test_initial_selftest_successful(probe,
                                      mock_probe_config):
