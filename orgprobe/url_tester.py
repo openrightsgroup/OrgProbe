@@ -214,7 +214,10 @@ class UrlTester:
 
     @staticmethod
     def extract_title(content):
-        match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
+        if isinstance(content, str):
+            match = re.search('<title>(.*?)</title', content, re.S + re.I + re.M)
+        else:
+            match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
         if match:
             return match.group(1).decode('utf8', 'replace').strip()
 
