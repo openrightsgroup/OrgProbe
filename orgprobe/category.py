@@ -1,6 +1,9 @@
 import re
+import base64
 import logging
 import operator
+
+from functools import reduce
 
 try:
     import urlparse
@@ -34,7 +37,7 @@ class Categorizor(object):
                 param = qs[self.rule[1]][0]
                 if len(self.rule) == 3:
                     if self.rule[2] == 'base64':
-                        param = param.decode('base64')
+                        param = base64.b64decode(param)
                 logging.debug("Got category: %s", param)
                 return param
             except (KeyError, IndexError):

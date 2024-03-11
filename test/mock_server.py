@@ -119,7 +119,7 @@ def https_server_that_returns_success():
 def http_server_that_returns_success():
     server = http.server.HTTPServer(("localhost", 0), HttpHandler)
     try:
-        threading.Thread(server.handle_request, ())
+        threading.Thread(target=server.handle_request)
         yield server.server_address[1]
     finally:
         server.server_close()
