@@ -14,7 +14,7 @@ class AMQPQueue(object):
             credentials=creds,
             virtual_host=opts.get('vhost', '/'),
             port=int(opts.get('port', 5672)),
-            heartbeat_interval=15,
+            #heartbeat_interval=15,
         )
         self.network = network
         logging.debug("Opening AMQP connection")
@@ -37,19 +37,19 @@ class AMQPQueue(object):
         self.conn = pika.SelectConnection(
             self.params,
             on_open_callback=self.on_open,
-            stop_ioloop_on_close=True
+            #stop_ioloop_on_close=True
         )
         self.conn.ioloop.start()
 
     def on_open(self, conn):
-        self.conn.channel(self.on_channel_open)
+        self.conn.channel(on_open_callback=self.on_channel_open)
 
     def on_channel_open(self, ch):
         self.ch = ch
         if self.prefetch:
             logging.debug("Setting QOS prefetch to %s", self.prefetch)
-            self.ch.basic_qos(None, 0, int(self.prefetch), False)
-        self.consumer_tag = self.ch.basic_consume(self.decode_msg, queue=self.queue_name)
+            self.ch.basic_qos(0, int(self.prefetch))
+        self.consumer_tag = self.ch.basic_consume(self.queue_name, self.decode_msg)
 
     def decode_msg(self, channel, method, props, msg):
         # this is a wrapper callback that decodes the json data

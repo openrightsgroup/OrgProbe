@@ -1,4 +1,6 @@
 
+import six
+
 class Result(object):
     __slots__ = ['status', 'code', 'category', 'type', '_title', 'ip', 'body_length', 'ssl_verified',
                  'ssl_fingerprint', 'final_url', 'resolved_ip', 'request_data']
@@ -24,7 +26,7 @@ class Result(object):
     def title(self):
         if self._title is None:
             return None
-        if isinstance(self._title, unicode):
+        if isinstance(self._title, six.text_type):
             return self._title.encode('utf8')
         # otherwise string; hope for utf8
         return self._title
