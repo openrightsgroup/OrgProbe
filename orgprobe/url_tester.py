@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_USER_AGENT = 'OrgProbe/2.2.0 (+http://www.blocked.org.uk)'
-
+NAME_NOT_FOUND = 'Name or service not known'
 
 class UrlTester:
     READ_SIZE = 8192
@@ -104,18 +104,28 @@ class UrlTester:
             try:
                 # look for dns failure in exception message
                 # requests lib turns nested exceptions into strings
-                if 'Name or service not known' in v.args[0].message:
+                if NAME_NOT_FOUND in v.args[0].message:
                     logger.info("DNS resolution failed(1)")
                     return Result('dnserror', -1, final_url=v.request.url)
             except:
                 pass
+
             try:
                 # look for dns failure in exception message
-                if 'Name or service not known' in v.args[0][1].strerror:
+                if NAME_NOT_FOUND in v.args[0][1].strerror:
                     logger.info("DNS resolution failed(2)")
                     return Result('dnserror', -1, final_url=v.request.url)
             except:
                 pass
+
+            try:
+                # look for dns failure in exception message
+                if NAME_NOT_FOUND in v.args[0].args[0]:
+                    logger.info("DNS resolution failed(3)")
+                    return Result('dnserror', -1, final_url=v.request.url)
+            except:
+                pass
+
             return Result('timeout', -1, final_url=v.request.url)
 
         except Exception as v:
