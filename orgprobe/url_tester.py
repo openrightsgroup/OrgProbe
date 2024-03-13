@@ -59,7 +59,7 @@ class UrlTester:
         try:
             with contextlib.closing(self._make_request(url)) as req:
                 try:
-                    body, bodyiter = self.fetch_body(req)
+                    body = self.fetch_body(req)
 
                     result = self.rules_matcher.test_response(req, body)
                     result.ip = req.peername
@@ -74,16 +74,14 @@ class UrlTester:
                     if self.do_record_request_data:
                         hashcalc = hashlib.sha256()
 
-                        if bodyiter is not None:
+                        if body is not None:
                             hashcalc.update(body)
-                            for part in bodyiter:
-                                hashcalc.update(part)
 
                         req_record = self.create_request_record(req)
 
                         req_record['rsp'].update({
-                            'content': self.decode_content(body, req_record['rsp']['headers']) if body else None,
-                            'hash': hashcalc.hexdigest() if bodyiter else None,
+                            'content': body or None,
+                            'hash': hashcalc.hexdigest() if body else None,
                         })
 
                         result.request_data.append(req_record)
@@ -93,15 +91,15 @@ class UrlTester:
                     logger.error("Response test error: %s: %s", repr(v), v)
                     raise
         except requests.exceptions.SSLError as v:
-            logger.warn("SSL Error: %s", v)
+            logger.warning("SSL Error: %s", v)
             return Result('sslerror', -1)
 
         except requests.exceptions.Timeout as v:
-            logger.warn("Connection timeout: %s", v)
+            logger.warning("Connection timeout: %s", v)
             return Result('timeout', -1, final_url=v.request.url)
 
         except requests.exceptions.ConnectionError as v:
-            logger.warn("Connection error: %s", v)
+            logger.warning("Connection error: %s", v)
 
             try:
                 # look for dns failure in exception message
@@ -126,16 +124,11 @@ class UrlTester:
 
     def fetch_body(self, req):
         if req.headers.get('content-type', '').lower().startswith('text'):
-            body_iter = req.iter_content(self.READ_SIZE)
-            try:
-                body = next(body_iter)
-            except StopIteration:
-                body = ''
+            return req.text
         else:
             # we're not downloading images
-            body = ''
-            body_iter = None
-        return body, body_iter
+            body = None
+        return body
 
     @staticmethod
     def hash(s):
@@ -150,7 +143,7 @@ class UrlTester:
         for r in req.history:
             request_record = self.create_request_record(r)
             request_record['rsp'].update({
-                'content': self.decode_content(r.content, request_record['rsp']['headers']) if r.content else None,
+                'content': r.text or None,
                 'hash': self.hash(r.content) if r.content else None,
             })
             out.append(request_record)
@@ -215,34 +208,9 @@ class UrlTester:
     @staticmethod
     def extract_title(content):
         if isinstance(content, str):
-            match = re.search('<title>(.*?)</title', content, re.S + re.I + re.M)
+            if match := re.search('<title>(.*?)</title', content, re.S + re.I + re.M):
+                return match.group(1).strip()
         else:
-            match = re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M)
-        if match:
-            return match.group(1).decode('utf8', 'replace').strip()
+            if match := re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M):
+                return match.group(1).decode('utf8', 'replace').strip()
 
-    @staticmethod
-    def decode_content(content, headers):
-        """
-        Get a 1024-character snippet(unicode) of the body content, using charset from content-type
-        header if available.
-        """
-        charset = None
-        for (name, value) in headers:
-            if name.lower() == 'content-type':
-                logging.debug("Got content-type: %s", value)
-                content_type = value
-
-                if ';' in content_type:
-                    for part in content_type.split(';', 1)[1].split():
-                        (key, value) = part.split('=')
-                        if key.strip().lower() == 'charset':
-                            charset = value.strip().lower()
-                            break
-
-        if charset is None:
-            charset = chardet.detect(content)['encoding']
-            # chardet can get confused with very short utf8 strings, reporting iso-8859-1
-            logger.info("Chardet result: %s", charset)
-
-        return content.decode(charset, 'replace')[:1024]

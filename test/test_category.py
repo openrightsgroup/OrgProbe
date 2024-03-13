@@ -7,7 +7,7 @@ def test_category():
 
 
 def test_category_base64():
-    assert b'violence' == Categorizor('querystring:category:base64').categorize(
+    assert 'violence' == Categorizor('querystring:category:base64').categorize(
         'http://isp.example.com/blocked?category=dmlvbGVuY2U=')
 
 

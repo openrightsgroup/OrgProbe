@@ -24,11 +24,6 @@ class Result(object):
 
     @property
     def title(self):
-        if self._title is None:
-            return None
-        if isinstance(self._title, six.text_type):
-            return self._title.encode('utf8')
-        # otherwise string; hope for utf8
         return self._title
 
     def __str__(self):

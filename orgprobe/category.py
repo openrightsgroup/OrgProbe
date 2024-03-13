@@ -37,7 +37,7 @@ class Categorizor(object):
                 param = qs[self.rule[1]][0]
                 if len(self.rule) == 3:
                     if self.rule[2] == 'base64':
-                        param = base64.b64decode(param)
+                        param = base64.b64decode(param).decode('utf8')
                 logging.debug("Got category: %s", param)
                 return param
             except (KeyError, IndexError):
