@@ -109,7 +109,7 @@ def https_server_that_returns_success():
                                     certfile=certfile,
                                     server_side=True)
     try:
-        thread.start_new_thread(server.handle_request, ())
+        threading.Thread(target=server.handle_request)
         yield server.server_address[1]
     finally:
         server.server_close()

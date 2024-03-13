@@ -119,7 +119,7 @@ class UrlTester:
             return Result('timeout', -1, final_url=v.request.url)
 
         except Exception as v:
-            logger.warn("Connection error: %s", v)
+            logger.warning("Connection error: %s", v)
             return Result('error', -1)
 
     def fetch_body(self, req):
@@ -135,7 +135,6 @@ class UrlTester:
         return hashlib.sha256(s).hexdigest()
 
     def record_request_data(self, req):
-
         if not self.do_record_request_data:
             return None
 
