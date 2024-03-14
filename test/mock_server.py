@@ -29,10 +29,10 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
             getattr(self, self.URL_MAP[self.path])()  # call named function
             return
         self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.send_header("Content-length", "87")
+        self.send_header(b"Content-type", b"text/plain")
+        self.send_header(b"Content-length", b"87")
         self.end_headers()
-        self.wfile.write("""<html>
+        self.wfile.write(b"""<html>
 <head>
 <title>Title Text</title>
 </head>
@@ -50,7 +50,7 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Location", "/")
         self.send_header("Content-length", "16")
         self.end_headers()
-        self.wfile.write("Redirecting to /")
+        self.wfile.write(b"Redirecting to /")
 
     def send_image(self):
         try:
@@ -58,7 +58,7 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-type", "image/png")
             self.send_header("Content-length", "16")
             self.end_headers()
-            self.wfile.write("\x00" * 16)
+            self.wfile.write(b"\x00" * 16)
         except IOError as exc:
             if exc.errno == 104:  # connection reset by peer
                 # we expect the connection to hangup, since the probe
@@ -71,28 +71,28 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html; charset=UTF-8')
         self.send_header('Content-length', '8')
         self.end_headers()
-        self.wfile.write("\xc2\xa320 GBP")
+        self.wfile.write(b"\xc2\xa320 GBP")
 
     def send_iso88591(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=ISO-8859-1')
         self.send_header('Content-length', '7')
         self.end_headers()
-        self.wfile.write("\xa320 GBP")
+        self.wfile.write(b"\xa320 GBP")
 
     def send_nocharset_iso(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.send_header('Content-length', '7')
         self.end_headers()
-        self.wfile.write("\xa320 GBP")
+        self.wfile.write(b"\xa320 GBP")
 
     def send_nocharset_utf8(self):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.send_header('Content-length', '18')
         self.end_headers()
-        self.wfile.write("\xc2\xa320 GBP, \xc2\xa390 GBP")
+        self.wfile.write(b"\xc2\xa320 GBP, \xc2\xa390 GBP")
 
 @contextmanager
 def https_server_that_returns_success():
@@ -109,7 +109,8 @@ def https_server_that_returns_success():
                                     certfile=certfile,
                                     server_side=True)
     try:
-        threading.Thread(target=server.handle_request)
+        t = threading.Thread(target=server.handle_request)
+        t.start()
         yield server.server_address[1]
     finally:
         server.server_close()
@@ -119,7 +120,8 @@ def https_server_that_returns_success():
 def http_server_that_returns_success():
     server = http.server.HTTPServer(("localhost", 0), HttpHandler)
     try:
-        threading.Thread(target=server.handle_request)
+        t = threading.Thread(target=server.handle_request)
+        t.start()
         yield server.server_address[1]
     finally:
         server.server_close()

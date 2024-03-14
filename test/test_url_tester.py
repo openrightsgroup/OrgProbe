@@ -143,12 +143,12 @@ def test_no_https(url_tester):
 
         # result recording
         assert len(result.request_data) > 0
-        assert result.request_data[0]['rsp']['ip'] is not None
-        assert result.request_data[0]['rsp']['ssl_fingerprint'] is None
-        assert result.request_data[0]['rsp']['ssl_verified'] is None
-        assert result.request_data[0]['rsp'][
-                   'hash'] == "0a0ba88b1efe73e8915aa4c6b6197f70d51f8bdf1fdc3ecb54d50b55f3d29d61"
-        assert result.request_data[0]['rsp']['content'] == """<html>
+        rsp = result.request_data[0]['rsp']
+        assert rsp['ip'] is not None
+        assert rsp['ssl_fingerprint'] is None
+        assert rsp['ssl_verified'] is None
+        assert rsp['hash'] == "0a0ba88b1efe73e8915aa4c6b6197f70d51f8bdf1fdc3ecb54d50b55f3d29d61"
+        assert rsp['content'] == """<html>
 <head>
 <title>Title Text</title>
 </head>

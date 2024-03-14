@@ -52,6 +52,7 @@ class UrlTester:
             timeout=self.timeout,
             verify=self.verify_ssl,
             stream=True,
+            allow_redirects=True,
             hooks={'response': self.run_response_hooks}
         )
 
@@ -75,7 +76,7 @@ class UrlTester:
                         hashcalc = hashlib.sha256()
 
                         if body is not None:
-                            hashcalc.update(body)
+                            hashcalc.update(req.content)
 
                         req_record = self.create_request_record(req)
 
@@ -216,6 +217,8 @@ class UrlTester:
 
     @staticmethod
     def extract_title(content):
+        if content is None:
+            return None
         if isinstance(content, str):
             if match := re.search('<title>(.*?)</title', content, re.S + re.I + re.M):
                 return match.group(1).strip()
