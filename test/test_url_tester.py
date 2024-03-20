@@ -1,12 +1,14 @@
 import pytest
 
 from os import path
+import logging
 
 from orgprobe.result import Result
 from orgprobe.url_tester import UrlTester
 from test.mock_server import tcp_server_that_times_out, http_server_that_returns_success, \
     https_server_that_returns_success, CERTIFICATE_FINGERPRINT
 
+logging.basicConfig(level=logging.DEBUG)
 
 @pytest.fixture
 def url_tester(mock_rules_matcher):
