@@ -11,4 +11,6 @@ COPY orgprobe /orgprobe
 COPY $CONFIGFILE /config.ini
 
 WORKDIR /
-CMD ["python", "orgprobe-daemon", "-c", "config.ini"]
+ENTRYPOINT ["python", "orgprobe-daemon", "-c", "config.ini"]
+CMD [""]
+
