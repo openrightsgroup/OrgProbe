@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_USER_AGENT = 'OrgProbe/2.4.0 (+http://www.blocked.org.uk)'
 NAME_NOT_FOUND = 'Name or service not known'
 
+
 class UrlTester:
     READ_SIZE = 8192
 
@@ -131,7 +132,8 @@ class UrlTester:
             logger.warning("Connection error: %s", v)
             return Result('error', -1)
 
-    def fetch_body(self, req):
+    @staticmethod
+    def fetch_body(req):
         if req.headers.get('content-type', '').lower().startswith('text'):
             return req.text
         else:
@@ -205,7 +207,7 @@ class UrlTester:
             logger.info("Got fingerprint: %s", ssl_fingerprint)
             return ssl_fingerprint
         except Exception as exc:
-            logger.warn("SSL fingerprint error: %s", exc)
+            logger.warning("SSL fingerprint error: %s", exc)
 
     @staticmethod
     def get_ssl_is_verified(req):
@@ -232,22 +234,13 @@ class UrlTester:
         """
         if req.content is None:
             return None
-        charset = None
-        for (name, value) in req.headers.items():
-            if name.lower() == 'content-type':
-                logging.debug("Got content-type: %s", value)
-                content_type = value
+        if ';' in req.headers.get('content-type', ''):
+            # use requests' own decoding
+            return req.text[:1024]
 
-                if ';' in content_type:
-                    for part in content_type.split(';', 1)[1].split():
-                        (key, value) = part.split('=')
-                        if key.strip().lower() == 'charset':
-                            charset = value.strip().lower()
-                            break
-
-        if charset is None:
-            charset = chardet.detect(req.content)['encoding']
-            # chardet can get confused with very short utf8 strings, reporting iso-8859-1
-            logger.info("Chardet result: %s", charset)
+        # otherwise do our own decoding on the raw content
+        charset = chardet.detect(req.content)['encoding']
+        # chardet can get confused with very short utf8 strings, reporting iso-8859-1
+        logger.info("Chardet result: %s", charset)
 
         return req.content.decode(charset, 'replace')[:1024]
