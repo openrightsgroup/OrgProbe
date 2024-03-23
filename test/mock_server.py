@@ -29,8 +29,8 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
             getattr(self, self.URL_MAP[self.path])()  # call named function
             return
         self.send_response(200)
-        self.send_header(b"Content-type", b"text/plain")
-        self.send_header(b"Content-length", b"87")
+        self.send_header("Content-type", "text/plain")
+        self.send_header("Content-length", "87")
         self.end_headers()
         self.wfile.write(b"""<html>
 <head>

@@ -201,3 +201,12 @@ def test_timeout(url_tester):
         assert result.code == -1
         assert result.ssl_verified is None
         assert result.ssl_fingerprint is None
+
+
+def test_ip_external_http(url_tester):
+    result = url_tester().test_url('http://example.com')
+    assert result.resolved_ip is not None
+
+def test_ip_external_https(url_tester):
+    result = url_tester().test_url('https://www.example.com')
+    assert result.resolved_ip is not None
