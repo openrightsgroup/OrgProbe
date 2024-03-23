@@ -13,7 +13,7 @@ from .signing import RequestSigner
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_USER_AGENT = 'OrgProbe/2.2.0 (+http://www.blocked.org.uk)'
+DEFAULT_USER_AGENT = 'OrgProbe/2.4.0 (+http://www.blocked.org.uk)'
 NAME_NOT_FOUND = 'Name or service not known'
 
 class UrlTester:
@@ -38,9 +38,7 @@ class UrlTester:
     def test_url(self, url):
         logger.info("Testing URL: %s", url)
 
-
         result = self._test_url_no_accounting(url)
-
 
         logger.info("Result for: %s : %s", url, result.status)
         return result
@@ -81,7 +79,7 @@ class UrlTester:
                         req_record = self.create_request_record(req)
 
                         req_record['rsp'].update({
-                            'content': body or None,
+                            'content': self.decode_content_preview(req) if body else None,
                             'hash': hashcalc.hexdigest() if body else None,
                         })
 
@@ -153,7 +151,7 @@ class UrlTester:
         for r in req.history:
             request_record = self.create_request_record(r)
             request_record['rsp'].update({
-                'content': r.text or None,
+                'content': self.decode_content_preview(r),
                 'hash': self.hash(r.content) if r.content else None,
             })
             out.append(request_record)
@@ -226,3 +224,30 @@ class UrlTester:
             if match := re.search(b'<title>(.*?)</title', content, re.S + re.I + re.M):
                 return match.group(1).decode('utf8', 'replace').strip()
 
+    @staticmethod
+    def decode_content_preview(req):
+        """
+        Get a 1024-character snippet(unicode) of the body content, using charset from content-type
+        header if available.
+        """
+        if req.content is None:
+            return None
+        charset = None
+        for (name, value) in req.headers.items():
+            if name.lower() == 'content-type':
+                logging.debug("Got content-type: %s", value)
+                content_type = value
+
+                if ';' in content_type:
+                    for part in content_type.split(';', 1)[1].split():
+                        (key, value) = part.split('=')
+                        if key.strip().lower() == 'charset':
+                            charset = value.strip().lower()
+                            break
+
+        if charset is None:
+            charset = chardet.detect(req.content)['encoding']
+            # chardet can get confused with very short utf8 strings, reporting iso-8859-1
+            logger.info("Chardet result: %s", charset)
+
+        return req.content.decode(charset, 'replace')[:1024]
