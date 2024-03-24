@@ -64,7 +64,7 @@ class AMQPQueue(object):
         logging.debug("Count: %s, Lifetime: %s", self.count, self.lifetime)
         if self.lifetime is not None and self.count >= self.lifetime:
             logging.info("Cancelling subscription due to lifetime expiry")
-            self.ch.basic_cancel(self.on_cancel, self.consumer_tag)
+            self.ch.basic_cancel(self.consumer_tag, self.on_cancel)
 
     def on_cancel(self, *args):
         self.ch.close()
