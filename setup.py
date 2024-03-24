@@ -11,8 +11,8 @@ setup(name='OrgProbe',
       packages=['orgprobe'],
       scripts=['orgprobe-daemon'],
       requires=[
-          'pika(>=0.10.0)',
-          'requests(==2.12.0)',
+          'pika(>=1.2.0)',
+          'requests(==2.25.0)',
           'configparser(==3.5.0)'
       ]
       )
