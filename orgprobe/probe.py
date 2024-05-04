@@ -46,13 +46,32 @@ class Probe(object):
 
         if self.probe_config.get('selftest', 'true').lower() != 'true':
             logger.debug("selftest on startup disabled")
-        else:
-            for url in self.apiconfig['self-test']['must-allow']:
-                if self.url_tester.test_url(url).status != 'ok':
+            return
+
+        allow_partial = self.probe_config.get('partial_selftest', 'false') == 'true'
+
+        partial_results = []
+        # run the selftest anyway of override == True
+        for url in self.apiconfig['self-test']['must-allow']:
+            if self.url_tester.test_url(url).status != 'ok':
+                if not allow_partial:
                     raise SelfTestError
-            for url in self.apiconfig['self-test']['must-block']:
-                if self.url_tester.test_url(url).status != 'blocked':
+                partial_results.append(False)
+            else:
+                partial_results.append(True)
+        if not any(partial_results):
+            raise SelfTestError
+
+        partial_results = []
+        for url in self.apiconfig['self-test']['must-block']:
+            if self.url_tester.test_url(url).status != 'blocked':
+                if not allow_partial:
                     raise SelfTestError
+                partial_results.append(False)
+            else:
+                partial_results.append(True)
+        if not any(partial_results):
+            raise SelfTestError
 
     @classmethod
     def _get_timestamp(cls):
