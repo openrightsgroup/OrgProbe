@@ -171,29 +171,19 @@ def test_initial_selftest_successful(probe,
 def test_initial_selftest_must_block_site_allowed(probe,
                                                   mock_url_tester,
                                                   mock_probe_config):
+    # force all responses to "ok" to test that selftest fails the must-block section
     mock_url_tester.test_url.side_effect = None
     mock_url_tester.test_url.return_value = Result('ok', 200)
     mock_probe_config['selftest'] = 'True'
 
     with raises(SelfTestError):
         probe().run_startup_selftest()
-
-
-def test_initial_selftest_must_block_site_allowed_partial(probe_partial_selftest,
-                                                          mock_url_tester,
-                                                          mock_probe_config):
-    mock_url_tester.test_url.side_effect = None
-    mock_url_tester.test_url.return_value = Result('ok', 200)
-    mock_probe_config['selftest'] = 'True'
-    mock_probe_config['partial_selftest'] = 'True'
-
-    with raises(SelfTestError):
-        probe_partial_selftest().run_startup_selftest()
 
 
 def test_initial_selftest_must_allow_site_blocked(probe,
                                                   mock_url_tester,
                                                   mock_probe_config):
+    # force all responses to "blocked" to test that selftest fails the must-allow section
     mock_url_tester.test_url.side_effect = None
     mock_url_tester.test_url.return_value = Result('blocked', 200)
     mock_probe_config['selftest'] = 'True'
@@ -202,15 +192,15 @@ def test_initial_selftest_must_allow_site_blocked(probe,
         probe().run_startup_selftest()
 
 
-def test_initial_selftest_must_allow_site_blocked_partial(probe_partial_selftest,
-                                                          mock_url_tester,
-                                                          mock_probe_config):
-    mock_url_tester.test_url.side_effect = None
-    mock_url_tester.test_url.return_value = Result('blocked', 200)
+def test_initial_selftest_partial(probe_partial_selftest,
+                                  mock_url_tester,
+                                  mock_probe_config):
+    # include a failing site in the check list to make sure self-test still passes
+    # in partial mode
     mock_probe_config['selftest'] = 'True'
+    mock_probe_config['partial_selftest'] = 'True'
 
-    with raises(SelfTestError):
-        probe_partial_selftest().run_startup_selftest()
+    probe_partial_selftest().run_startup_selftest()
 
 
 def test_jitter_func(mocker, monkeypatch, probe):
