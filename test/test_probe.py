@@ -54,6 +54,13 @@ def mock_api_config():
 
 
 @pytest.fixture
+def mock_api_config_partial(mock_api_config):
+    mock_api_config['self-test']['must-allow'].append('http://will.timeout.fakedomain')
+    mock_api_config['self-test']['must-block'].append('http://will.timeout.fakedomain')
+    return mock_api_config
+
+
+@pytest.fixture
 def mock_amqp_queue():
     return Mock(AMQPQueue)
 
@@ -65,6 +72,8 @@ def mock_url_tester():
     def test_url(url):
         if "must.block.fakedomain" in url:
             return Result('blocked', 200)
+        elif "will.timeout.fakedomain" in url:
+            return Result('timeout', -1)
         else:
             return Result('ok', 200)
 
@@ -84,6 +93,20 @@ def probe(mock_amqp_queue,
         ip="1.2.3.4",
         probe_config=mock_probe_config,
         apiconfig=mock_api_config)
+
+
+@pytest.fixture
+def probe_partial_selftest(mock_amqp_queue,
+                           mock_api_config_partial,
+                           mock_url_tester,
+                           mock_probe_config):
+    return lambda: Probe(
+        url_tester=mock_url_tester,
+        queue=mock_amqp_queue,
+        isp="FakeISP",
+        ip="1.2.3.4",
+        probe_config=mock_probe_config,
+        apiconfig=mock_api_config_partial)
 
 
 def test_successful_check(mock_amqp_queue, probe):
@@ -156,6 +179,18 @@ def test_initial_selftest_must_block_site_allowed(probe,
         probe().run_startup_selftest()
 
 
+def test_initial_selftest_must_block_site_allowed_partial(probe_partial_selftest,
+                                                          mock_url_tester,
+                                                          mock_probe_config):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('ok', 200)
+    mock_probe_config['selftest'] = 'True'
+    mock_probe_config['partial_selftest'] = 'True'
+
+    with raises(SelfTestError):
+        probe_partial_selftest().run_startup_selftest()
+
+
 def test_initial_selftest_must_allow_site_blocked(probe,
                                                   mock_url_tester,
                                                   mock_probe_config):
@@ -166,8 +201,19 @@ def test_initial_selftest_must_allow_site_blocked(probe,
     with raises(SelfTestError):
         probe().run_startup_selftest()
 
-def test_jitter_func(mocker, monkeypatch, probe):
 
+def test_initial_selftest_must_allow_site_blocked_partial(probe_partial_selftest,
+                                                          mock_url_tester,
+                                                          mock_probe_config):
+    mock_url_tester.test_url.side_effect = None
+    mock_url_tester.test_url.return_value = Result('blocked', 200)
+    mock_probe_config['selftest'] = 'True'
+
+    with raises(SelfTestError):
+        probe_partial_selftest().run_startup_selftest()
+
+
+def test_jitter_func(mocker, monkeypatch, probe):
     probe_instance = probe()
     monkeypatch.setattr(Probe, '_get_timestamp',
                         staticmethod(lambda: datetime.datetime(2021, 6, 20, 11, 20, 0))
