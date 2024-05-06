@@ -104,10 +104,11 @@ def https_server_that_returns_success():
                             'localhost.crt')
 
     server = http.server.HTTPServer(("localhost", 0), HttpHandler)
-    server.socket = ssl.wrap_socket(server.socket,
-                                    keyfile=keyfile,
-                                    certfile=certfile,
-                                    server_side=True)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(keyfile=keyfile,
+                            certfile=certfile)
+    server.socket = context.wrap_socket(server.socket,
+                                        server_side=True)
     try:
         t = threading.Thread(target=server.handle_request)
         t.start()

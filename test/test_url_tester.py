@@ -41,7 +41,7 @@ def mock_rules_matcher():
 
 
 def test_retrieve_not_existent(url_tester):
-    result = url_tester().test_url('http://does.not.exist.example.local')
+    result = url_tester().test_url('http://does.not.exist.example.localdomain')
     assert result.status == 'dnserror'
     assert result.code == -1
     assert result.ip is None
