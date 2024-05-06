@@ -7,7 +7,7 @@ import sys
 import configparser
 import logging
 
-from orgprobe import run
+from orgprobe import run, __version__
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',
@@ -21,6 +21,9 @@ parser.add_argument('--verbose',
 parser.add_argument('--selftest',
                     action='store_true',
                     help='Run self-test and exit')
+parser.add_argument('--version', '-V',
+                    action='store_true',
+                    help="Report version and exit")
 parser.add_argument(dest='profile',
                     nargs='?',
                     help='Probe profile name.  If unset then defaults to the first '
@@ -35,6 +38,11 @@ logging.basicConfig(
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logging.getLogger('pika').setLevel(logging.ERROR)
 logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.ERROR)
+
+if args.version:
+    logging.getLogger().setLevel(logging.FATAL)
+    print(f"ORGProbe version {__version__}")
+    sys.exit(0)
 
 config = configparser.ConfigParser(
     interpolation=configparser.ExtendedInterpolation()
