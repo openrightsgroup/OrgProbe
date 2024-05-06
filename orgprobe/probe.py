@@ -43,7 +43,7 @@ class Probe(object):
             logger.debug("selftest on startup disabled")
             return
 
-        allow_partial = self.probe_config.get('partial_selftest', 'false') == 'true'
+        allow_partial = self.probe_config.get('partial_selftest', 'false').lower() == 'true'
 
         partial_results = []
         # run the selftest anyway of override == True
