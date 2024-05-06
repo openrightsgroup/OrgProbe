@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='OrgProbe',
-      version='2.2.0',
+      version='2.2.1',
       description='Blocked.org.uk probe software',
       author='Open Rights Group',
       author_email='blocked@openrightsgroup.org',
