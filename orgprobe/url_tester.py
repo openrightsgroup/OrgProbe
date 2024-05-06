@@ -13,7 +13,7 @@ from .signing import RequestSigner
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_USER_AGENT = 'OrgProbe/2.4.0 (+http://www.blocked.org.uk)'
+DEFAULT_USER_AGENT = 'OrgProbe/2.4.1 (+http://www.blocked.org.uk)'
 NAME_NOT_FOUND = 'Name or service not known'
 NAME_NOT_FOUND2 = 'No address associated with hostname'
 
