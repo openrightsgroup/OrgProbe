@@ -2,8 +2,10 @@
 
 from distutils.core import setup
 
+from .orgprobe import __version__
+
 setup(name='OrgProbe',
-      version='2.4.1',
+      version=__version__,
       description='Blocked.org.uk probe software',
       author='Open Rights Group',
       author_email='blocked@openrightsgroup.org',
