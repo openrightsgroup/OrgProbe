@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-from .orgprobe import __version__
+from orgprobe import __version__
 
 setup(name='OrgProbe',
       version=__version__,

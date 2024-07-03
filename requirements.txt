@@ -3,3 +3,4 @@ pika~=1.2.0
 requests~=2.25.0
 pyasn1>=0.3.7
 #enum>=0.4.7
+six~=1.16.0
