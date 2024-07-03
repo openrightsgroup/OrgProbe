@@ -9,14 +9,17 @@ import chardet
 
 from .result import Result
 from .signing import RequestSigner
-from . import __version__
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_USER_AGENT = 'OrgProbe/{} (+http://www.blocked.org.uk)'.format(__version__)
 NAME_NOT_FOUND = 'Name or service not known'
 NAME_NOT_FOUND2 = 'No address associated with hostname'
+
+
+def get_default_user_agent():
+    from . import __version__
+    return 'OrgProbe/{} (+http://www.blocked.org.uk)'.format(__version__)
 
 class UrlTester:
     READ_SIZE = 8192
@@ -25,7 +28,7 @@ class UrlTester:
         self.rules_matcher = rules_matcher
         self.signer = RequestSigner(probe_config['secret'])
         self.headers = {
-            'User-Agent': probe_config.get('useragent', DEFAULT_USER_AGENT),
+            'User-Agent': probe_config.get('useragent', get_default_user_agent()),
         }
 
         if 'verify_ssl' in probe_config:
