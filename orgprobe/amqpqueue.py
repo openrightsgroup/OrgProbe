@@ -37,13 +37,12 @@ class AMQPQueue(object):
         self.conn = pika.SelectConnection(
             self.params,
             on_open_callback=self.on_open,
-            #stop_ioloop_on_close=True
+            on_close_callback=self.on_close
         )
         self.conn.ioloop.start()
 
     def on_open(self, conn):
-        self.conn.channel(on_open_callback=self.on_channel_open,
-                          on_close_callback=self.on_close)
+        self.conn.channel(on_open_callback=self.on_channel_open)
 
     def on_channel_open(self, ch):
         self.ch = ch
