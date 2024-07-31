@@ -42,7 +42,8 @@ class AMQPQueue(object):
         self.conn.ioloop.start()
 
     def on_open(self, conn):
-        self.conn.channel(on_open_callback=self.on_channel_open)
+        self.conn.channel(on_open_callback=self.on_channel_open,
+                          on_close_callback=self.on_close)
 
     def on_channel_open(self, ch):
         self.ch = ch
@@ -72,6 +73,9 @@ class AMQPQueue(object):
 
     def close(self):
         self.conn.close()
+
+    def on_close(self, connection, exception):
+        connection.ioloop.stop()
 
     def send_report(self, report, urlhash=None):
         routing_key = 'results.' + self.network + '.' + \
