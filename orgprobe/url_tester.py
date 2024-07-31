@@ -100,7 +100,7 @@ class UrlTester:
 
         except requests.exceptions.Timeout as v:
             logger.warning("Connection timeout: %s", v)
-            return Result('timeout', -1, final_url=v.request.url)
+            return Result('timeout', -1, final_url=v.request.url if v.request else None)
 
         except requests.exceptions.ConnectionError as v:
             logger.warning("Connection error: %s", v)
