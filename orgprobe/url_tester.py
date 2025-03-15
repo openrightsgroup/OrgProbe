@@ -246,5 +246,8 @@ class UrlTester:
         charset = chardet.detect(req.content)['encoding']
         # chardet can get confused with very short utf8 strings, reporting iso-8859-1
         logger.info("Chardet result: %s", charset)
-
-        return req.content.decode(charset, 'replace')[:1024]
+        if charset:
+            return req.content.decode(charset, 'replace')[:1024]
+        
+        # otherwise we'll just go ahead and try requests' version
+        return req.text[:1024]
