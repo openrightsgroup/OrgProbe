@@ -204,6 +204,17 @@ def test_ip_external_http(url_tester):
     result = url_tester().test_url('http://example.com')
     assert result.resolved_ip is not None
 
+
 def test_ip_external_https(url_tester):
     result = url_tester().test_url('https://www.example.com')
     assert result.resolved_ip is not None
+
+    
+def test_record_requests(url_tester):
+    """Ensure request data is serializable"""
+    import json
+    result = url_tester().test_url('http://example.com')
+    jsondata = json.dumps(result.request_data)
+    assert isinstance(jsondata, str)
+    
+    

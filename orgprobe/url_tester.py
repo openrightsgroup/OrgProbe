@@ -168,13 +168,13 @@ class UrlTester:
         return {
             'req': {
                 'url': rq.url,
-                'headers': rq.headers.items(),
+                'headers': [(k,v) for k,v in rq.headers.items()],
                 'body': rq.body or None,
                 'hash': self.hash(rq.body) if rq.body else None,
                 'method': rq.method
             },
             'rsp': {
-                'headers': r.headers.items(),
+                'headers': [(k,v) for k,v in r.headers.items()],
                 'status': r.status_code,
                 'ssl_fingerprint': r.ssl_fingerprint,
                 'ssl_verified': r.ssl_verified,
