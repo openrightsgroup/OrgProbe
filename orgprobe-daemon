@@ -8,7 +8,7 @@ import configparser
 import logging
 
 from orgprobe import __version__
-from orpprobe.bootstrapper import run
+from orgprobe.bootstrapper import run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',
