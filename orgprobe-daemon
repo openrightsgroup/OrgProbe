@@ -7,7 +7,8 @@ import sys
 import configparser
 import logging
 
-from orgprobe import run, __version__
+from orgprobe import __version__
+from orpprobe.bootstrapper import run
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config',
