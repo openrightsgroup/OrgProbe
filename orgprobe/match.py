@@ -18,9 +18,19 @@ class RulesMatcher(object):
             if field == 'url':
                 value = req.url
                 flags = 0
-            if field == 'body':
+            elif field == 'body':
                 value = body
                 flags = re.M
+            elif field.startswith('hdr.'):
+                header = field.split('.', 1)[-1]
+                if header not in req.headers:
+                    logging.debug("Header %s not found, skipping", header)
+                    return None
+                value = req.headers[header]
+                flags = 0
+            else:
+                logging.warn("unknown re test field: %s", field)
+                return None
 
             match = re.search(
                 pattern,

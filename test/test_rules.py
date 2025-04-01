@@ -17,9 +17,10 @@ class FakeRequest(object):
 matcher = RulesMatcher(
     [
         "re:url:^http://www\\.talktalk\\.co\\.uk/notice/parental-controls\\?accessurl",
-        "re:url:^http://www\\.siteblocked\\.org/piratebay\\.html\\?"
+        "re:url:^http://www\\.siteblocked\\.org/piratebay\\.html\\?",
+        "re:hdr.location:^http://www\\.siteblocked\\.org/piratebay\\.html\\?"
     ],
-    ['PARENTAL', 'COPYRIGHT'],
+    ['PARENTAL', 'COPYRIGHT', 'COPYRIGHT'],
     Categorizor('querystring:urlclassname:base64')
 )
 
@@ -54,6 +55,16 @@ def test_copyright_match():
                     200,
                     [FakeRequest('http://example.com', 302)]),
                     '')
+    assert result.status == "blocked"
+    assert result.code == 302
+    assert result.category is None
+    assert result.type == 'COPYRIGHT'
+
+def test_location_match():
+    req = FakeRequest('http://example.com', 302, [])
+    req.headers['location'] = 'http://www.siteblocked.org/piratebay.html?'
+    result = matcher.test_response(req, '')
+
     assert result.status == "blocked"
     assert result.code == 302
     assert result.category is None
