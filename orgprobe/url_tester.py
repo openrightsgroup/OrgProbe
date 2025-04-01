@@ -37,6 +37,7 @@ class UrlTester:
             self.verify_ssl = False
 
         self.do_record_request_data = (probe_config.get('record_requests', '').lower() == 'true')
+        self.allow_redirects = (probe_config.get('allow_redirects', 'true').lower() == 'true')
 
         self.timeout = int(probe_config.get('timeout', 5))
 
@@ -55,7 +56,7 @@ class UrlTester:
             timeout=self.timeout,
             verify=self.verify_ssl,
             stream=True,
-            allow_redirects=True,
+            allow_redirects=self.allow_redirects,
             hooks={'response': self.run_response_hooks}
         )
 
