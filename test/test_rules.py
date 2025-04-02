@@ -18,9 +18,10 @@ matcher = RulesMatcher(
     [
         "re:url:^http://www\\.talktalk\\.co\\.uk/notice/parental-controls\\?accessurl",
         "re:url:^http://www\\.siteblocked\\.org/piratebay\\.html\\?",
+        "re:body:CANNOT FIND",
         "re:hdr.location:^http://www\\.siteblocked\\.org/piratebay\\.html\\?"
     ],
-    ['PARENTAL', 'COPYRIGHT', 'COPYRIGHT'],
+    ['PARENTAL', 'COPYRIGHT', 'COPYRIGHT', 'COPYRIGHT'],
     Categorizor('querystring:urlclassname:base64')
 )
 

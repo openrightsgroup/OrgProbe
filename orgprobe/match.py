@@ -19,6 +19,9 @@ class RulesMatcher(object):
                 value = req.url
                 flags = 0
             elif field == 'body':
+                if body is None:
+                    # cannot test a missing body
+                    return None
                 value = body
                 flags = re.M
             elif field.startswith('hdr.'):
