@@ -63,7 +63,7 @@ def test_copyright_match():
 def test_location_match():
     req = FakeRequest('http://example.com', 302, [])
     req.headers['location'] = 'http://www.siteblocked.org/piratebay.html?'
-    result = matcher.test_response(req, '')
+    result = matcher.test_response(req, None)
 
     assert result.status == "blocked"
     assert result.code == 302

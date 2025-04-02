@@ -44,8 +44,9 @@ class RulesMatcher(object):
 
     def test_response(self, req, body):
         category = ''
+        bodylen = 0 if body is None else len(body)
 
-        logging.debug("Read body length: %s", len(body))
+        logging.debug("Read body length: %s", bodylen)
         for rulenum, rule in enumerate(self.rules):
             if self.match_rule(req, body, rule) is True:
                 logging.debug("Matched rule: %s; blocked", rule)
@@ -54,12 +55,12 @@ class RulesMatcher(object):
                 return Result(
                     'blocked',
                     req.history[-1].status_code
-                    if hasattr(req, 'history') and len(req.history) > 0
-                    else req.status_code,
+                        if hasattr(req, 'history') and len(req.history) > 0
+                        else req.status_code,
                     category,
                     self.blocktype[rulenum] if self.blocktype else None,
-                    body_length=len(body)
+                    body_length=bodylen
                 )
 
-        return Result('ok', req.status_code, body_length=len(body))
+        return Result('ok', req.status_code, body_length=bodylen)
 
