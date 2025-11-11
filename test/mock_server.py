@@ -22,6 +22,7 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
         '/send-iso88591': 'send_iso88591',
         '/send-nocharset': 'send_nocharset_iso',
         '/send-nocharset-utf8': 'send_nocharset_utf8',
+        '/send-nocharset-large': 'send_nocharset_large',
     }
 
     def do_GET(self):
@@ -93,6 +94,13 @@ class HttpHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-length', '18')
         self.end_headers()
         self.wfile.write(b"\xc2\xa320 GBP, \xc2\xa390 GBP")
+
+    def send_nocharset_large(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.send_header('Content-length', str(1024*1024*16*4))
+        self.end_headers()
+        self.wfile.write(b"0123456701234567" * 1024 * 1024 * 4)
 
 @contextmanager
 def https_server_that_returns_success():

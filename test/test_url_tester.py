@@ -1,3 +1,6 @@
+
+import time
+
 import pytest
 
 from os import path
@@ -127,6 +130,18 @@ def test_nocharset_content_utf8(url_tester):
 
         assert result.request_data[-1]['rsp']['content'] == u"\u00a320 GBP, \u00a390 GBP"
         assert _find_header(result.request_data[-1]['rsp']['headers'], 'Content-length') == "18"
+
+
+def test_nocharset_large_content(url_tester):
+    with http_server_that_returns_success() as port:
+        t = time.time()
+        result = url_tester().test_url('http://localhost:{}/send-nocharset-large'.format(port))
+        assert result.status == 'ok'
+
+        st = time.time() - t
+        assert st < 2
+        assert st < 1.0
+
 
 
 def test_no_https(url_tester):
