@@ -63,11 +63,11 @@ def run(config, probe_name=None, selftest=False):
     try:
         probe.run_startup_selftest(selftest)
         if selftest:
-            print(f"OK - {isp} self-test pass")
+            print("OK - {isp} self-test pass".format(isp=isp))
             return 0
     except SelfTestError as exc:
         if selftest:
-            print(f"CRITICAL - {isp} self-test fail")
+            print("CRITICAL - {isp} self-test fail".format(isp=isp))
             return 3
         raise
 
